@@ -17,15 +17,14 @@
  */
 package io.zeebe.broker.system.deployment.processor;
 
-import static io.zeebe.broker.workflow.data.DeploymentState.CREATED;
 import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.agrona.BitUtil.SIZE_OF_LONG;
 
 import org.agrona.ExpandableArrayBuffer;
 
 import io.zeebe.broker.Loggers;
-import io.zeebe.broker.logstreams.processor.TypedEvent;
-import io.zeebe.broker.logstreams.processor.TypedEventProcessor;
+import io.zeebe.broker.logstreams.processor.TypedRecord;
+import io.zeebe.broker.logstreams.processor.TypedRecordProcessor;
 import io.zeebe.broker.logstreams.processor.TypedResponseWriter;
 import io.zeebe.broker.logstreams.processor.TypedStreamWriter;
 import io.zeebe.broker.system.deployment.data.PendingDeployments;
@@ -35,15 +34,18 @@ import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflow;
 import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIterator;
 import io.zeebe.broker.system.deployment.handler.DeploymentTimer;
 import io.zeebe.broker.workflow.data.DeploymentEvent;
+import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.util.buffer.BufferUtil;
 
-public class DeploymentDistributedProcessor implements TypedEventProcessor<DeploymentEvent>
+public class DeploymentDistributedProcessor implements TypedRecordProcessor<DeploymentEvent>
 {
     private final ExpandableArrayBuffer buffer = new ExpandableArrayBuffer(3 * (SIZE_OF_LONG + SIZE_OF_INT));
 
     private final PendingDeployments pendingDeployments;
     private final PendingWorkflows pendingWorkflows;
     private final DeploymentTimer timer;
+
+    private boolean deploymentCreated;
 
     public DeploymentDistributedProcessor(PendingDeployments pendingDeployments, PendingWorkflows pendingWorkflows, DeploymentTimer timer)
     {
@@ -52,15 +54,15 @@ public class DeploymentDistributedProcessor implements TypedEventProcessor<Deplo
         this.timer = timer;
     }
 
+
     @Override
-    public void processEvent(TypedEvent<DeploymentEvent> event)
+    public void processRecord(TypedRecord<DeploymentEvent> event)
     {
         final PendingDeployment pendingDeployment = pendingDeployments.get(event.getKey());
+        deploymentCreated = pendingDeployment != null && !pendingDeployment.isResolved(); // could have timed out already
 
-        if (pendingDeployment != null && !pendingDeployment.isResolved())
+        if (deploymentCreated)
         {
-            event.getValue().setState(CREATED);
-
             Loggers.SYSTEM_LOGGER.debug("Deployment with key '{}' on topic '{}' successful.",
                                         pendingDeployment.getDeploymentKey(),
                                         BufferUtil.bufferAsString(pendingDeployment.getTopicName()));
@@ -73,11 +75,11 @@ public class DeploymentDistributedProcessor implements TypedEventProcessor<Deplo
     }
 
     @Override
-    public boolean executeSideEffects(TypedEvent<DeploymentEvent> event, TypedResponseWriter responseWriter)
+    public boolean executeSideEffects(TypedRecord<DeploymentEvent> event, TypedResponseWriter responseWriter)
     {
-        if (event.getValue().getState() == CREATED)
+        if (deploymentCreated)
         {
-            return responseWriter.write(event);
+            return responseWriter.writeEvent(Intent.CREATED, event);
         }
         else
         {
@@ -86,11 +88,11 @@ public class DeploymentDistributedProcessor implements TypedEventProcessor<Deplo
     }
 
     @Override
-    public long writeEvent(TypedEvent<DeploymentEvent> event, TypedStreamWriter writer)
+    public long writeRecord(TypedRecord<DeploymentEvent> event, TypedStreamWriter writer)
     {
-        if (event.getValue().getState() == CREATED)
+        if (deploymentCreated)
         {
-            return writer.writeFollowupEvent(event.getKey(), event.getValue());
+            return writer.writeFollowUpEvent(event.getKey(), Intent.CREATED, event.getValue());
         }
         else
         {
@@ -99,12 +101,11 @@ public class DeploymentDistributedProcessor implements TypedEventProcessor<Deplo
     }
 
     @Override
-    public void updateState(TypedEvent<DeploymentEvent> event)
+    public void updateState(TypedRecord<DeploymentEvent> event)
     {
-        final DeploymentEvent deploymentEvent = event.getValue();
         final long deploymentKey = event.getKey();
 
-        if (deploymentEvent.getState() == CREATED)
+        if (deploymentCreated)
         {
             pendingDeployments.remove(deploymentKey);
             timer.onDeploymentResolved(deploymentKey);

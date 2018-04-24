@@ -31,7 +31,7 @@ import io.zeebe.util.buffer.BufferUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 
-public class WorkflowCreateProcessor implements TypedEventProcessor<WorkflowEvent>
+public class WorkflowCreateProcessor implements TypedRecordProcessor<WorkflowEvent>
 {
     private final TopicPartitions topicPartitions;
     private final PendingDeployments pendingDeployments;
@@ -54,11 +54,11 @@ public class WorkflowCreateProcessor implements TypedEventProcessor<WorkflowEven
     }
 
     @Override
-    public void processEvent(TypedEvent<WorkflowEvent> event)
+    public void processRecord(TypedRecord<WorkflowEvent> command)
     {
         partitionIds.clear();
 
-        final WorkflowEvent workflowEvent = event.getValue();
+        final WorkflowEvent workflowEvent = command.getValue();
 
         final PendingDeployment pendingDeployment = pendingDeployments.get(workflowEvent.getDeploymentKey());
         ensureNotNull("pending deployment", pendingDeployment);
@@ -80,22 +80,22 @@ public class WorkflowCreateProcessor implements TypedEventProcessor<WorkflowEven
     }
 
     @Override
-    public boolean executeSideEffects(TypedEvent<WorkflowEvent> event, TypedResponseWriter responseWriter)
+    public boolean executeSideEffects(TypedRecord<WorkflowEvent> command, TypedResponseWriter responseWriter)
     {
         return workflowRequestSender.distributeWorkflow(
                    partitionIds,
-                   event.getKey(),
-                   event.getValue());
+                   command.getKey(),
+                   command.getValue());
     }
 
     @Override
-    public void updateState(TypedEvent<WorkflowEvent> event)
+    public void updateState(TypedRecord<WorkflowEvent> command)
     {
-        final WorkflowEvent workflowEvent = event.getValue();
+        final WorkflowEvent workflowEvent = command.getValue();
 
         for (int partitionId: partitionIds)
         {
-            pendingWorkflows.put(event.getKey(), partitionId, PendingWorkflows.STATE_CREATE, workflowEvent.getDeploymentKey());
+            pendingWorkflows.put(command.getKey(), partitionId, PendingWorkflows.STATE_CREATE, workflowEvent.getDeploymentKey());
         }
     }
 

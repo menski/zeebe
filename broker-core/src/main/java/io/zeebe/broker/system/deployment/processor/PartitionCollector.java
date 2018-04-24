@@ -17,16 +17,17 @@
  */
 package io.zeebe.broker.system.deployment.processor;
 
-import io.zeebe.broker.clustering.orchestration.topic.TopicEvent;
-import io.zeebe.broker.clustering.orchestration.topic.TopicState;
-import io.zeebe.broker.logstreams.processor.TypedEvent;
-import io.zeebe.broker.logstreams.processor.TypedEventProcessor;
-import io.zeebe.broker.logstreams.processor.TypedEventStreamProcessorBuilder;
-import io.zeebe.broker.system.deployment.data.TopicPartitions;
-import io.zeebe.protocol.clientapi.EventType;
-import io.zeebe.util.IntObjectBiConsumer;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
+
+import io.zeebe.broker.clustering.orchestration.topic.TopicEvent;
+import io.zeebe.broker.logstreams.processor.TypedEventStreamProcessorBuilder;
+import io.zeebe.broker.logstreams.processor.TypedRecord;
+import io.zeebe.broker.logstreams.processor.TypedRecordProcessor;
+import io.zeebe.broker.system.deployment.data.TopicPartitions;
+import io.zeebe.protocol.clientapi.Intent;
+import io.zeebe.protocol.clientapi.ValueType;
+import io.zeebe.util.IntObjectBiConsumer;
 
 public class PartitionCollector
 {
@@ -49,7 +50,7 @@ public class PartitionCollector
     public void registerWith(TypedEventStreamProcessorBuilder builder)
     {
         builder
-            .onEvent(EventType.TOPIC_EVENT, TopicState.CREATED, new TopicCreatedProcessor())
+            .onEvent(ValueType.TOPIC, Intent.CREATED, new TopicCreatedProcessor())
             .withStateResource(partitions.getRawMap());
     }
 
@@ -58,12 +59,12 @@ public class PartitionCollector
         return partitions;
     }
 
-    protected class TopicCreatedProcessor implements TypedEventProcessor<TopicEvent>
+    protected class TopicCreatedProcessor implements TypedRecordProcessor<TopicEvent>
     {
         private final IntArrayList partitionIds = new IntArrayList();
 
         @Override
-        public void processEvent(TypedEvent<TopicEvent> event)
+        public void processRecord(TypedRecord<TopicEvent> event)
         {
             final TopicEvent topicEvent = event.getValue();
 
@@ -72,7 +73,7 @@ public class PartitionCollector
         }
 
         @Override
-        public void updateState(TypedEvent<TopicEvent> event)
+        public void updateState(TypedRecord<TopicEvent> event)
         {
             final DirectBuffer topicName = event.getValue().getName();
 

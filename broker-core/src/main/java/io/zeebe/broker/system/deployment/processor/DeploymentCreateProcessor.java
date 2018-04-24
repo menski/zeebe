@@ -17,15 +17,12 @@
  */
 package io.zeebe.broker.system.deployment.processor;
 
-import static io.zeebe.broker.workflow.data.DeploymentState.REJECTED;
-import static io.zeebe.broker.workflow.data.DeploymentState.VALIDATED;
 import static io.zeebe.util.buffer.BufferUtil.bufferAsString;
 import static io.zeebe.util.buffer.BufferUtil.wrapString;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Iterator;
-import java.util.function.Consumer;
 
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
@@ -33,8 +30,8 @@ import org.slf4j.Logger;
 
 import io.zeebe.broker.Loggers;
 import io.zeebe.broker.logstreams.processor.TypedBatchWriter;
-import io.zeebe.broker.logstreams.processor.TypedEvent;
-import io.zeebe.broker.logstreams.processor.TypedEventProcessor;
+import io.zeebe.broker.logstreams.processor.TypedRecord;
+import io.zeebe.broker.logstreams.processor.TypedRecordProcessor;
 import io.zeebe.broker.logstreams.processor.TypedResponseWriter;
 import io.zeebe.broker.logstreams.processor.TypedStreamWriter;
 import io.zeebe.broker.system.deployment.data.PendingDeployments;
@@ -47,20 +44,19 @@ import io.zeebe.broker.system.deployment.data.WorkflowVersions;
 import io.zeebe.broker.workflow.data.DeployedWorkflow;
 import io.zeebe.broker.workflow.data.DeploymentEvent;
 import io.zeebe.broker.workflow.data.DeploymentResource;
-import io.zeebe.broker.workflow.data.DeploymentState;
 import io.zeebe.broker.workflow.data.ResourceType;
 import io.zeebe.broker.workflow.data.WorkflowEvent;
-import io.zeebe.broker.workflow.data.WorkflowState;
 import io.zeebe.model.bpmn.BpmnModelApi;
 import io.zeebe.model.bpmn.ValidationResult;
 import io.zeebe.model.bpmn.instance.Workflow;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
 import io.zeebe.msgpack.value.ValueArray;
-import io.zeebe.protocol.impl.BrokerEventMetadata;
+import io.zeebe.protocol.clientapi.Intent;
+import io.zeebe.protocol.impl.RecordMetadata;
 import io.zeebe.util.buffer.BufferUtil;
 import io.zeebe.util.collection.IntArrayListIterator;
 
-public class DeploymentCreateProcessor implements TypedEventProcessor<DeploymentEvent>
+public class DeploymentCreateProcessor implements TypedRecordProcessor<DeploymentEvent>
 {
     private static final Logger LOG = Loggers.SYSTEM_LOGGER;
 
@@ -74,6 +70,8 @@ public class DeploymentCreateProcessor implements TypedEventProcessor<Deployment
 
     private final DeploymentResourceIterator deploymentResourceIterator = new DeploymentResourceIterator();
 
+    private boolean success;
+
     public DeploymentCreateProcessor(
             TopicPartitions topicPartitions,
             WorkflowVersions workflowVersions,
@@ -85,12 +83,12 @@ public class DeploymentCreateProcessor implements TypedEventProcessor<Deployment
     }
 
     @Override
-    public void processEvent(TypedEvent<DeploymentEvent> event)
+    public void processRecord(TypedRecord<DeploymentEvent> command)
     {
-        final DeploymentEvent deploymentEvent = event.getValue();
+        final DeploymentEvent deploymentEvent = command.getValue();
         final DirectBuffer topicName = deploymentEvent.getTopicName();
 
-        boolean success = false;
+        success = false;
 
         if (isTopicCreated(topicName))
         {
@@ -113,8 +111,6 @@ public class DeploymentCreateProcessor implements TypedEventProcessor<Deployment
             LOG.info("Cannot create deployment: no topic found with name '{}'.", name);
             deploymentEvent.setErrorMessage("No topic found with name " + name);
         }
-
-        deploymentEvent.setState(success ? VALIDATED : REJECTED);
     }
 
     private boolean isTopicCreated(final DirectBuffer topicName)
@@ -270,13 +266,11 @@ public class DeploymentCreateProcessor implements TypedEventProcessor<Deployment
     }
 
     @Override
-    public boolean executeSideEffects(TypedEvent<DeploymentEvent> event, TypedResponseWriter responseWriter)
+    public boolean executeSideEffects(TypedRecord<DeploymentEvent> command, TypedResponseWriter responseWriter)
     {
-        final DeploymentEvent deploymentEvent = event.getValue();
-
-        if (deploymentEvent.getState() == REJECTED)
+        if (!success)
         {
-            return responseWriter.write(event);
+            return responseWriter.writeRejection(command);
         }
         else
         {
@@ -285,19 +279,20 @@ public class DeploymentCreateProcessor implements TypedEventProcessor<Deployment
     }
 
     @Override
-    public long writeEvent(TypedEvent<DeploymentEvent> event, TypedStreamWriter writer)
+    public long writeRecord(TypedRecord<DeploymentEvent> command, TypedStreamWriter writer)
     {
-        final DeploymentEvent deploymentEvent = event.getValue();
+        final DeploymentEvent deploymentEvent = command.getValue();
 
-        if (deploymentEvent.getState() == REJECTED)
+        if (!success)
         {
-            return writer.writeFollowupEvent(event.getKey(), deploymentEvent);
+            return writer.writeRejection(command);
         }
         else
         {
             final TypedBatchWriter batch = writer.newBatch();
+            final RecordMetadata metadata = command.getMetadata();
 
-            batch.addFollowUpEvent(event.getKey(), deploymentEvent, addRequestMetadata(event));
+            batch.addFollowUpEvent(command.getKey(), Intent.VALIDATED, deploymentEvent, metadata::copyRequestMetadata);
 
             final DeployedWorkflowIterator deployedWorkflowIterator = deploymentResourceIterator.getDeployedWorkflows();
             while (deployedWorkflowIterator.hasNext())
@@ -305,33 +300,24 @@ public class DeploymentCreateProcessor implements TypedEventProcessor<Deployment
                 final DeployedWorkflow deployedWorkflow = deployedWorkflowIterator.next();
 
                 workflowEvent
-                    .setState(WorkflowState.CREATE)
                     .setBpmnProcessId(deployedWorkflow.getBpmnProcessId())
                     .setVersion(deployedWorkflow.getVersion())
                     .setBpmnXml(deployedWorkflowIterator.getDeploymentResource().getResource())
-                    .setDeploymentKey(event.getKey());
+                    .setDeploymentKey(command.getKey());
 
-                batch.addNewEvent(workflowEvent);
+                batch.addNewCommand(Intent.CREATE, workflowEvent);
             }
 
             return batch.write();
         }
     }
 
-    private Consumer<BrokerEventMetadata> addRequestMetadata(TypedEvent<DeploymentEvent> event)
-    {
-        final BrokerEventMetadata metadata = event.getMetadata();
-        return m -> m
-                .requestId(metadata.getRequestId())
-                .requestStreamId(metadata.getRequestStreamId());
-    }
-
     @Override
-    public void updateState(TypedEvent<DeploymentEvent> event)
+    public void updateState(TypedRecord<DeploymentEvent> command)
     {
-        final DeploymentEvent deploymentEvent = event.getValue();
+        final DeploymentEvent deploymentEvent = command.getValue();
 
-        if (deploymentEvent.getState() == DeploymentState.VALIDATED)
+        if (success)
         {
             updateWorkflowVersions(deploymentEvent.getTopicName(), deploymentEvent.deployedWorkflows());
         }

@@ -28,23 +28,21 @@ import java.time.Duration;
 import org.junit.Rule;
 import org.junit.Test;
 
+import io.zeebe.broker.clustering.orchestration.topic.TopicEvent;
 import io.zeebe.broker.logstreams.processor.TypedStreamEnvironment;
 import io.zeebe.broker.logstreams.processor.TypedStreamProcessor;
 import io.zeebe.broker.system.deployment.data.PendingDeployments;
 import io.zeebe.broker.system.deployment.data.PendingWorkflows;
 import io.zeebe.broker.system.deployment.data.WorkflowVersions;
-import io.zeebe.broker.system.deployment.handler.DeploymentEventWriter;
 import io.zeebe.broker.system.deployment.handler.RemoteWorkflowsManager;
 import io.zeebe.broker.system.deployment.service.DeploymentManager;
-import io.zeebe.broker.clustering.orchestration.topic.TopicEvent;
-import io.zeebe.broker.clustering.orchestration.topic.TopicState;
 import io.zeebe.broker.topic.StreamProcessorControl;
 import io.zeebe.broker.util.StreamProcessorRule;
 import io.zeebe.broker.workflow.data.DeploymentEvent;
-import io.zeebe.broker.workflow.data.DeploymentState;
 import io.zeebe.broker.workflow.data.ResourceType;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
+import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.util.buffer.BufferUtil;
 
 public class CreateDeploymentStreamProcessorTest
@@ -70,9 +68,6 @@ public class CreateDeploymentStreamProcessorTest
         final PendingWorkflows pendingWorkflows = new PendingWorkflows();
         final PendingDeployments pendingDeployments = new PendingDeployments();
 
-        final DeploymentEventWriter writer =
-                new DeploymentEventWriter(env);
-
         final RemoteWorkflowsManager remoteManager = mock(RemoteWorkflowsManager.class);
         when(remoteManager.distributeWorkflow(any(), anyLong(), any())).thenReturn(true);
         when(remoteManager.deleteWorkflow(any(), anyLong(), any())).thenReturn(true);
@@ -83,7 +78,6 @@ public class CreateDeploymentStreamProcessorTest
                 pendingWorkflows,
                 DEPLOYMENT_TIMEOUT,
                 env,
-                writer,
                 remoteManager
             );
     }
@@ -96,10 +90,10 @@ public class CreateDeploymentStreamProcessorTest
 
         final StreamProcessorControl control = rule.runStreamProcessor(this::buildStreamProcessor);
 
-        control.blockAfterDeploymentEvent(e -> e.getValue().getState() == DeploymentState.VALIDATED);
+        control.blockAfterDeploymentEvent(e -> e.getMetadata().getIntent() == Intent.VALIDATED);
 
-        rule.writeEvent(topicCreated(STREAM_NAME, 1));
-        rule.writeEvent(createDeployment(ONE_TASK_PROCESS));
+        rule.writeEvent(Intent.CREATED, topic(STREAM_NAME, 1));
+        rule.writeCommand(Intent.CREATE, deployment(ONE_TASK_PROCESS));
 
         waitUntil(() -> control.isBlocked());
 
@@ -111,17 +105,16 @@ public class CreateDeploymentStreamProcessorTest
         // then
         waitUntil(() ->
             rule.events()
-                .onlyDeploymentEvents()
-                .inState(DeploymentState.TIMED_OUT)
+                .onlyDeploymentRecords()
+                .withIntent(Intent.TIMED_OUT)
                 .count()
             > 0);
     }
 
-    protected DeploymentEvent createDeployment(WorkflowDefinition workflow)
+    protected DeploymentEvent deployment(WorkflowDefinition workflow)
     {
         final DeploymentEvent event = new DeploymentEvent();
 
-        event.setState(DeploymentState.CREATE);
         event.setTopicName(STREAM_NAME);
         event.resources().add()
             .setResourceName(BufferUtil.wrapString("foo.bpmn"))
@@ -131,12 +124,11 @@ public class CreateDeploymentStreamProcessorTest
         return event;
     }
 
-    protected TopicEvent topicCreated(String name, int partitions)
+    protected TopicEvent topic(String name, int partitions)
     {
         final TopicEvent event = new TopicEvent();
         event.setName(BufferUtil.wrapString(name));
         event.setPartitions(partitions);
-        event.setState(TopicState.CREATED);
         for (int i = 0; i < partitions; i++)
         {
             event.getPartitionIds().add().setValue(i + 1);
@@ -144,5 +136,4 @@ public class CreateDeploymentStreamProcessorTest
 
         return event;
     }
-
 }

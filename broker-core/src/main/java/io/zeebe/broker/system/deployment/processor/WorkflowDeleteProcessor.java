@@ -19,17 +19,23 @@ package io.zeebe.broker.system.deployment.processor;
 
 import static io.zeebe.util.EnsureUtil.ensureGreaterThan;
 
-import io.zeebe.broker.logstreams.processor.*;
-import io.zeebe.broker.system.deployment.data.*;
-import io.zeebe.broker.system.deployment.data.PendingDeployments.PendingDeployment;
-import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflow;
-import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIterator;
-import io.zeebe.broker.system.deployment.handler.RemoteWorkflowsManager;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
-import io.zeebe.broker.workflow.data.WorkflowState;
 import org.agrona.collections.IntArrayList;
 
-public class WorkflowDeleteProcessor implements TypedEventProcessor<WorkflowEvent>
+import io.zeebe.broker.logstreams.processor.TypedRecord;
+import io.zeebe.broker.logstreams.processor.TypedRecordProcessor;
+import io.zeebe.broker.logstreams.processor.TypedResponseWriter;
+import io.zeebe.broker.logstreams.processor.TypedStreamWriter;
+import io.zeebe.broker.system.deployment.data.PendingDeployments;
+import io.zeebe.broker.system.deployment.data.PendingDeployments.PendingDeployment;
+import io.zeebe.broker.system.deployment.data.PendingWorkflows;
+import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflow;
+import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIterator;
+import io.zeebe.broker.system.deployment.data.WorkflowVersions;
+import io.zeebe.broker.system.deployment.handler.RemoteWorkflowsManager;
+import io.zeebe.broker.workflow.data.WorkflowEvent;
+import io.zeebe.protocol.clientapi.Intent;
+
+public class WorkflowDeleteProcessor implements TypedRecordProcessor<WorkflowEvent>
 {
     private final PendingDeployments pendingDeployments;
     private final PendingWorkflows pendingWorkflows;
@@ -52,11 +58,9 @@ public class WorkflowDeleteProcessor implements TypedEventProcessor<WorkflowEven
     }
 
     @Override
-    public void processEvent(TypedEvent<WorkflowEvent> event)
+    public void processRecord(TypedRecord<WorkflowEvent> command)
     {
-        event.getValue().setState(WorkflowState.DELETED);
-
-        final long workflowKey = event.getKey();
+        final long workflowKey = command.getKey();
 
         partitionIds.clear();
 
@@ -75,25 +79,25 @@ public class WorkflowDeleteProcessor implements TypedEventProcessor<WorkflowEven
     }
 
     @Override
-    public boolean executeSideEffects(TypedEvent<WorkflowEvent> event, TypedResponseWriter responseWriter)
+    public boolean executeSideEffects(TypedRecord<WorkflowEvent> command, TypedResponseWriter responseWriter)
     {
         return workflowMessageSender.deleteWorkflow(
                    partitionIds,
-                   event.getKey(),
-                   event.getValue());
+                   command.getKey(),
+                   command.getValue());
     }
 
     @Override
-    public long writeEvent(TypedEvent<WorkflowEvent> event, TypedStreamWriter writer)
+    public long writeRecord(TypedRecord<WorkflowEvent> command, TypedStreamWriter writer)
     {
-        return writer.writeFollowupEvent(event.getKey(), event.getValue());
+        return writer.writeFollowUpEvent(command.getKey(), Intent.DELETED, command.getValue());
     }
 
     @Override
-    public void updateState(TypedEvent<WorkflowEvent> event)
+    public void updateState(TypedRecord<WorkflowEvent> command)
     {
-        final long workflowKey = event.getKey();
-        final WorkflowEvent workflowEvent = event.getValue();
+        final long workflowKey = command.getKey();
+        final WorkflowEvent workflowEvent = command.getValue();
 
         for (int partitionId : partitionIds)
         {
