@@ -37,7 +37,6 @@ import io.zeebe.protocol.clientapi.SubscriptionType;
 
 public class TestTopicClient
 {
-
     public static final String PROP_STATE = "state";
 
     // workflow related properties
@@ -110,6 +109,19 @@ public class TestTopicClient
                       .command()
                       .put(PROP_STATE, "CREATE_WORKFLOW_INSTANCE")
                       .put(PROP_WORKFLOW_BPMN_PROCESS_ID, bpmnProcessId)
+                      .done()
+                      .sendAndAwait();
+    }
+
+    public ExecuteCommandResponse createWorkflowInstanceWithResponse(String bpmnProcessId, int version)
+    {
+        return apiRule.createCmdRequest()
+                      .partitionId(partitionId)
+                      .eventTypeWorkflow()
+                      .command()
+                      .put(PROP_STATE, "CREATE_WORKFLOW_INSTANCE")
+                      .put(PROP_WORKFLOW_BPMN_PROCESS_ID, bpmnProcessId)
+                      .put(PROP_WORKFLOW_VERSION, version)
                       .done()
                       .sendAndAwait();
     }
