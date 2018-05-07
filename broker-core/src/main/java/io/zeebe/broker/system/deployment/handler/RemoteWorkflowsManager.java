@@ -45,8 +45,8 @@ import io.zeebe.broker.system.deployment.message.CreateWorkflowResponse;
 import io.zeebe.broker.system.deployment.message.DeleteWorkflowMessage;
 import io.zeebe.broker.workflow.data.DeploymentRecord;
 import io.zeebe.broker.workflow.data.WorkflowRecord;
-import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.protocol.impl.RecordMetadata;
+import io.zeebe.protocol.intent.DeploymentIntent;
 import io.zeebe.transport.ClientOutput;
 import io.zeebe.transport.ClientResponse;
 import io.zeebe.transport.ClientTransport;
@@ -226,7 +226,7 @@ public class RemoteWorkflowsManager implements StreamProcessorLifecycleAware
                 {
                     final long position = writer.writeFollowUpEvent(
                         event.getKey(),
-                        Intent.DISTRIBUTED,
+                        DeploymentIntent.DISTRIBUTED,
                         event.getValue(),
                         metadata::copyRequestMetadata);
                     if (position >= 0)

@@ -25,8 +25,8 @@ import io.zeebe.broker.logstreams.processor.TypedEventStreamProcessorBuilder;
 import io.zeebe.broker.logstreams.processor.TypedRecord;
 import io.zeebe.broker.logstreams.processor.TypedRecordProcessor;
 import io.zeebe.broker.system.deployment.data.TopicPartitions;
-import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.protocol.clientapi.ValueType;
+import io.zeebe.protocol.intent.TopicIntent;
 import io.zeebe.util.IntObjectBiConsumer;
 
 public class PartitionCollector
@@ -50,7 +50,7 @@ public class PartitionCollector
     public void registerWith(TypedEventStreamProcessorBuilder builder)
     {
         builder
-            .onEvent(ValueType.TOPIC, Intent.CREATED, new TopicCreatedProcessor())
+            .onEvent(ValueType.TOPIC, TopicIntent.CREATED, new TopicCreatedProcessor())
             .withStateResource(partitions.getRawMap());
     }
 

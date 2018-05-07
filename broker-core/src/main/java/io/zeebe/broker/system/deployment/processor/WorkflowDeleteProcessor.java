@@ -33,7 +33,7 @@ import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIt
 import io.zeebe.broker.system.deployment.data.WorkflowVersions;
 import io.zeebe.broker.system.deployment.handler.RemoteWorkflowsManager;
 import io.zeebe.broker.workflow.data.WorkflowRecord;
-import io.zeebe.protocol.clientapi.Intent;
+import io.zeebe.protocol.intent.WorkflowIntent;
 
 public class WorkflowDeleteProcessor implements TypedRecordProcessor<WorkflowRecord>
 {
@@ -90,7 +90,7 @@ public class WorkflowDeleteProcessor implements TypedRecordProcessor<WorkflowRec
     @Override
     public long writeRecord(TypedRecord<WorkflowRecord> command, TypedStreamWriter writer)
     {
-        return writer.writeFollowUpEvent(command.getKey(), Intent.DELETED, command.getValue());
+        return writer.writeFollowUpEvent(command.getKey(), WorkflowIntent.DELETED, command.getValue());
     }
 
     @Override

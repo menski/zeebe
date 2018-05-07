@@ -28,10 +28,10 @@ import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.logstreams.log.LogStreamWriter;
 import io.zeebe.logstreams.log.LogStreamWriterImpl;
 import io.zeebe.protocol.Protocol;
-import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
 import io.zeebe.protocol.impl.RecordMetadata;
+import io.zeebe.protocol.intent.WorkflowIntent;
 import io.zeebe.transport.RemoteAddress;
 import io.zeebe.util.DeferredCommandContext;
 
@@ -61,7 +61,7 @@ public class WorkflowRequestMessageHandler
             .requestStreamId(remoteAddress.getStreamId())
             .protocolVersion(Protocol.PROTOCOL_VERSION)
             .recordType(RecordType.COMMAND)
-            .intent(Intent.CREATE)
+            .intent(WorkflowIntent.CREATE)
             .valueType(ValueType.WORKFLOW);
 
         createRequest.wrap(buffer, offset, length);
@@ -92,7 +92,7 @@ public class WorkflowRequestMessageHandler
         recordMetadata.reset()
             .protocolVersion(Protocol.PROTOCOL_VERSION)
             .recordType(RecordType.COMMAND)
-            .intent(Intent.DELETE)
+            .intent(WorkflowIntent.DELETE)
             .valueType(ValueType.WORKFLOW);
 
         deleteMessage.wrap(buffer, offset, length);

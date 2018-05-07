@@ -40,8 +40,9 @@ import io.zeebe.broker.system.deployment.processor.DeploymentValidatedProcessor;
 import io.zeebe.broker.system.deployment.processor.PartitionCollector;
 import io.zeebe.broker.system.deployment.processor.WorkflowCreateProcessor;
 import io.zeebe.broker.system.deployment.processor.WorkflowDeleteProcessor;
-import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.protocol.clientapi.ValueType;
+import io.zeebe.protocol.intent.DeploymentIntent;
+import io.zeebe.protocol.intent.WorkflowIntent;
 import io.zeebe.servicecontainer.Injector;
 import io.zeebe.servicecontainer.Service;
 import io.zeebe.servicecontainer.ServiceGroupReference;
@@ -123,13 +124,13 @@ public class DeploymentManager implements Service<DeploymentManager>
         final DeploymentTimer timer = new DeploymentTimer(pendingDeployments, deploymentTimeout);
 
         final TypedStreamProcessor streamProcessor = streamProcessorBuilder
-            .onCommand(ValueType.DEPLOYMENT, Intent.CREATE, new DeploymentCreateProcessor(partitions, workflowVersions, pendingDeployments))
-            .onEvent(ValueType.DEPLOYMENT, Intent.VALIDATED, new DeploymentValidatedProcessor(pendingDeployments, timer))
-            .onCommand(ValueType.WORKFLOW, Intent.CREATE, new WorkflowCreateProcessor(partitions, pendingDeployments, pendingWorkflows, remoteManager))
-            .onEvent(ValueType.DEPLOYMENT, Intent.DISTRIBUTED, new DeploymentDistributedProcessor(pendingDeployments, pendingWorkflows, timer))
-            .onEvent(ValueType.DEPLOYMENT, Intent.TIMED_OUT, new DeploymentTimedOutProcessor(pendingDeployments, pendingWorkflows, timer))
-            .onCommand(ValueType.WORKFLOW, Intent.DELETE, new WorkflowDeleteProcessor(pendingDeployments, pendingWorkflows, workflowVersions, remoteManager))
-            .onRejection(ValueType.DEPLOYMENT, Intent.CREATE, new DeploymentRejectedProcessor(pendingDeployments))
+            .onCommand(ValueType.DEPLOYMENT, DeploymentIntent.CREATE, new DeploymentCreateProcessor(partitions, workflowVersions, pendingDeployments))
+            .onEvent(ValueType.DEPLOYMENT, DeploymentIntent.VALIDATED, new DeploymentValidatedProcessor(pendingDeployments, timer))
+            .onCommand(ValueType.WORKFLOW, WorkflowIntent.CREATE, new WorkflowCreateProcessor(partitions, pendingDeployments, pendingWorkflows, remoteManager))
+            .onEvent(ValueType.DEPLOYMENT, DeploymentIntent.DISTRIBUTED, new DeploymentDistributedProcessor(pendingDeployments, pendingWorkflows, timer))
+            .onEvent(ValueType.DEPLOYMENT, DeploymentIntent.TIMED_OUT, new DeploymentTimedOutProcessor(pendingDeployments, pendingWorkflows, timer))
+            .onCommand(ValueType.WORKFLOW, WorkflowIntent.DELETE, new WorkflowDeleteProcessor(pendingDeployments, pendingWorkflows, workflowVersions, remoteManager))
+            .onRejection(ValueType.DEPLOYMENT, DeploymentIntent.CREATE, new DeploymentRejectedProcessor(pendingDeployments))
             .withStateResource(workflowVersions.getRawMap())
             .withStateResource(pendingDeployments.getRawMap())
             .withStateResource(pendingWorkflows.getRawMap())

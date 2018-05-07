@@ -34,7 +34,7 @@ import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflow;
 import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIterator;
 import io.zeebe.broker.system.deployment.handler.DeploymentTimer;
 import io.zeebe.broker.workflow.data.DeploymentRecord;
-import io.zeebe.protocol.clientapi.Intent;
+import io.zeebe.protocol.intent.DeploymentIntent;
 import io.zeebe.util.buffer.BufferUtil;
 
 public class DeploymentDistributedProcessor implements TypedRecordProcessor<DeploymentRecord>
@@ -79,7 +79,7 @@ public class DeploymentDistributedProcessor implements TypedRecordProcessor<Depl
     {
         if (deploymentCreated)
         {
-            return responseWriter.writeEvent(Intent.CREATED, event);
+            return responseWriter.writeEvent(DeploymentIntent.CREATED, event);
         }
         else
         {
@@ -92,7 +92,7 @@ public class DeploymentDistributedProcessor implements TypedRecordProcessor<Depl
     {
         if (deploymentCreated)
         {
-            return writer.writeFollowUpEvent(event.getKey(), Intent.CREATED, event.getValue());
+            return writer.writeFollowUpEvent(event.getKey(), DeploymentIntent.CREATED, event.getValue());
         }
         else
         {

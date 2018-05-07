@@ -51,8 +51,9 @@ import io.zeebe.model.bpmn.ValidationResult;
 import io.zeebe.model.bpmn.instance.Workflow;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
 import io.zeebe.msgpack.value.ValueArray;
-import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.protocol.impl.RecordMetadata;
+import io.zeebe.protocol.intent.DeploymentIntent;
+import io.zeebe.protocol.intent.WorkflowIntent;
 import io.zeebe.util.buffer.BufferUtil;
 import io.zeebe.util.collection.IntArrayListIterator;
 
@@ -292,7 +293,7 @@ public class DeploymentCreateProcessor implements TypedRecordProcessor<Deploymen
             final TypedBatchWriter batch = writer.newBatch();
             final RecordMetadata metadata = command.getMetadata();
 
-            batch.addFollowUpEvent(command.getKey(), Intent.VALIDATED, deploymentEvent, metadata::copyRequestMetadata);
+            batch.addFollowUpEvent(command.getKey(), DeploymentIntent.VALIDATED, deploymentEvent, metadata::copyRequestMetadata);
 
             final DeployedWorkflowIterator deployedWorkflowIterator = deploymentResourceIterator.getDeployedWorkflows();
             while (deployedWorkflowIterator.hasNext())
@@ -305,7 +306,7 @@ public class DeploymentCreateProcessor implements TypedRecordProcessor<Deploymen
                     .setBpmnXml(deployedWorkflowIterator.getDeploymentResource().getResource())
                     .setDeploymentKey(command.getKey());
 
-                batch.addNewCommand(Intent.CREATE, workflowEvent);
+                batch.addNewCommand(WorkflowIntent.CREATE, workflowEvent);
             }
 
             return batch.write();

@@ -29,8 +29,8 @@ import io.zeebe.broker.logstreams.processor.TypedStreamWriter;
 import io.zeebe.broker.system.deployment.data.PendingDeployments;
 import io.zeebe.broker.system.deployment.data.PendingDeployments.PendingDeployment;
 import io.zeebe.broker.workflow.data.DeploymentRecord;
-import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.protocol.impl.RecordMetadata;
+import io.zeebe.protocol.intent.DeploymentIntent;
 import io.zeebe.util.sched.ActorControl;
 import io.zeebe.util.sched.ScheduledTimer;
 
@@ -108,7 +108,7 @@ public class DeploymentTimer implements StreamProcessorLifecycleAware
 
             actor.runUntilDone(() ->
             {
-                final long position = writer.writeFollowUpEvent(deploymentEvent.getKey(), Intent.TIMED_OUT, deploymentEvent.getValue(), metadata::copyRequestMetadata);
+                final long position = writer.writeFollowUpEvent(deploymentEvent.getKey(), DeploymentIntent.TIMED_OUT, deploymentEvent.getValue(), metadata::copyRequestMetadata);
 
                 if (position >= 0)
                 {

@@ -42,7 +42,8 @@ import io.zeebe.broker.workflow.data.DeploymentRecord;
 import io.zeebe.broker.workflow.data.ResourceType;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
-import io.zeebe.protocol.clientapi.Intent;
+import io.zeebe.protocol.intent.DeploymentIntent;
+import io.zeebe.protocol.intent.TopicIntent;
 import io.zeebe.util.buffer.BufferUtil;
 
 public class CreateDeploymentStreamProcessorTest
@@ -90,10 +91,10 @@ public class CreateDeploymentStreamProcessorTest
 
         final StreamProcessorControl control = rule.runStreamProcessor(this::buildStreamProcessor);
 
-        control.blockAfterDeploymentEvent(e -> e.getMetadata().getIntent() == Intent.VALIDATED);
+        control.blockAfterDeploymentEvent(e -> e.getMetadata().getIntent() == DeploymentIntent.VALIDATED);
 
-        rule.writeEvent(Intent.CREATED, topic(STREAM_NAME, 1));
-        rule.writeCommand(Intent.CREATE, deployment(ONE_TASK_PROCESS));
+        rule.writeEvent(TopicIntent.CREATED, topic(STREAM_NAME, 1));
+        rule.writeCommand(DeploymentIntent.CREATE, deployment(ONE_TASK_PROCESS));
 
         waitUntil(() -> control.isBlocked());
 
@@ -106,7 +107,7 @@ public class CreateDeploymentStreamProcessorTest
         waitUntil(() ->
             rule.events()
                 .onlyDeploymentRecords()
-                .withIntent(Intent.TIMED_OUT)
+                .withIntent(DeploymentIntent.TIMED_OUT)
                 .count()
             > 0);
     }
