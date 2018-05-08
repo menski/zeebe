@@ -45,7 +45,7 @@ import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
 import io.zeebe.protocol.intent.IncidentIntent;
 import io.zeebe.protocol.intent.Intent;
-import io.zeebe.protocol.intent.TaskIntent;
+import io.zeebe.protocol.intent.JobIntent;
 import io.zeebe.protocol.intent.WorkflowInstanceIntent;
 import io.zeebe.test.broker.protocol.clientapi.ClientApiRule;
 import io.zeebe.test.broker.protocol.clientapi.ExecuteCommandResponse;
@@ -119,7 +119,7 @@ public class IncidentTest
             .containsEntry("workflowInstanceKey", workflowInstanceKey)
             .containsEntry("activityId", "failingTask")
             .containsEntry("activityInstanceKey", failureEvent.key())
-            .containsEntry("taskKey", -1);
+            .containsEntry("jobKey", -1);
     }
 
     @Test
@@ -131,7 +131,7 @@ public class IncidentTest
         // when
         final long workflowInstanceKey = testClient.createWorkflowInstance("process");
 
-        testClient.completeTaskOfType("test", MSGPACK_PAYLOAD);
+        testClient.completeJobOfType("test", MSGPACK_PAYLOAD);
 
         // then
         final SubscribedRecord failureEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETING);
@@ -146,7 +146,7 @@ public class IncidentTest
             .containsEntry("workflowInstanceKey", workflowInstanceKey)
             .containsEntry("activityId", "failingTask")
             .containsEntry("activityInstanceKey", failureEvent.key())
-            .containsEntry("taskKey", -1);
+            .containsEntry("jobKey", -1);
     }
 
     @Test
@@ -176,7 +176,7 @@ public class IncidentTest
             .containsEntry("workflowInstanceKey", workflowInstanceKey)
             .containsEntry("activityId", "failingTask")
             .containsEntry("activityInstanceKey", followUpEvent.key())
-            .containsEntry("taskKey", -1);
+            .containsEntry("jobKey", -1);
     }
 
     @Test
@@ -187,7 +187,7 @@ public class IncidentTest
 
         final long workflowInstanceKey = testClient.createWorkflowInstance("process");
 
-        testClient.completeTaskOfType("test", MSGPACK_PAYLOAD);
+        testClient.completeJobOfType("test", MSGPACK_PAYLOAD);
 
         final SubscribedRecord failureEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETING);
         final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.CREATED);
@@ -208,7 +208,7 @@ public class IncidentTest
             .containsEntry("workflowInstanceKey", workflowInstanceKey)
             .containsEntry("activityId", "failingTask")
             .containsEntry("activityInstanceKey", followUpEvent.key())
-            .containsEntry("taskKey", -1);
+            .containsEntry("jobKey", -1);
     }
 
 
@@ -269,7 +269,7 @@ public class IncidentTest
                                                  .containsEntry("workflowInstanceKey", workflowInstanceKey)
                                                  .containsEntry("activityId", "service")
                                                  .containsEntry("activityInstanceKey", followUpEvent.key())
-                                                 .containsEntry("taskKey", -1);
+                                                 .containsEntry("jobKey", -1);
     }
 
     @Test
@@ -286,7 +286,7 @@ public class IncidentTest
         testClient.createWorkflowInstance("process", MSGPACK_PAYLOAD);
 
         // when
-        testClient.completeTaskOfType("external", MSGPACK_MAPPER.writeValueAsBytes(JSON_MAPPER.readTree("{'testAttr':'test'}")));
+        testClient.completeJobOfType("external", MSGPACK_MAPPER.writeValueAsBytes(JSON_MAPPER.readTree("{'testAttr':'test'}")));
         receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_ACTIVATED);
 
         // then incident is created
@@ -311,7 +311,7 @@ public class IncidentTest
         final long workflowInstanceKey = testClient.createWorkflowInstance("process", MSGPACK_PAYLOAD);
 
         // when
-        testClient.completeTaskOfType("external", MSGPACK_MAPPER.writeValueAsBytes(JSON_MAPPER.readTree("{'testAttr':'test'}")));
+        testClient.completeJobOfType("external", MSGPACK_MAPPER.writeValueAsBytes(JSON_MAPPER.readTree("{'testAttr':'test'}")));
         receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_ACTIVATED);
 
         // then incident is created
@@ -337,7 +337,7 @@ public class IncidentTest
                                                  .containsEntry("workflowInstanceKey", workflowInstanceKey)
                                                  .containsEntry("activityId", "service")
                                                  .containsEntry("activityInstanceKey", followUpEvent.key())
-                                                 .containsEntry("taskKey", -1);
+                                                 .containsEntry("jobKey", -1);
     }
 
     @Test
@@ -354,7 +354,7 @@ public class IncidentTest
         testClient.createWorkflowInstance("process", MSGPACK_PAYLOAD);
 
         // when
-        testClient.completeTaskOfType("external");
+        testClient.completeJobOfType("external");
 
         // then incident is created
         final SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.CREATE);
@@ -378,7 +378,7 @@ public class IncidentTest
         final long workflowInstanceKey = testClient.createWorkflowInstance("process", MSGPACK_PAYLOAD);
 
         // when
-        testClient.completeTaskOfType("external");
+        testClient.completeJobOfType("external");
 
         // then incident is created
         final SubscribedRecord failureEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETING);
@@ -403,7 +403,7 @@ public class IncidentTest
                                                  .containsEntry("workflowInstanceKey", workflowInstanceKey)
                                                  .containsEntry("activityId", "service")
                                                  .containsEntry("activityInstanceKey", followUpEvent.key())
-                                                 .containsEntry("taskKey", -1);
+                                                 .containsEntry("jobKey", -1);
     }
 
     @Test
@@ -419,7 +419,7 @@ public class IncidentTest
         testClient.createWorkflowInstance("process", MSGPACK_PAYLOAD);
 
         // when
-        testClient.completeTaskOfType("external");
+        testClient.completeJobOfType("external");
 
         // then incident is created
         final SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.CREATE);
@@ -442,7 +442,7 @@ public class IncidentTest
         final long workflowInstanceKey = testClient.createWorkflowInstance("process", MSGPACK_PAYLOAD);
 
         // when
-        testClient.completeTaskOfType("external");
+        testClient.completeJobOfType("external");
 
         // then incident is created
         final SubscribedRecord failureEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETING);
@@ -467,7 +467,7 @@ public class IncidentTest
                                                  .containsEntry("workflowInstanceKey", workflowInstanceKey)
                                                  .containsEntry("activityId", "service")
                                                  .containsEntry("activityInstanceKey", followUpEvent.key())
-                                                 .containsEntry("taskKey", -1);
+                                                 .containsEntry("jobKey", -1);
     }
 
     @Test
@@ -804,7 +804,7 @@ public class IncidentTest
     }
 
     @Test
-    public void shouldCreateIncidentIfTaskHasNoRetriesLeft()
+    public void shouldCreateIncidentIfJobHasNoRetriesLeft()
     {
         // given
         testClient.deploy(WORKFLOW_INPUT_MAPPING);
@@ -812,75 +812,75 @@ public class IncidentTest
         final long workflowInstanceKey = testClient.createWorkflowInstance("process", PAYLOAD);
 
         // when
-        failTaskWithNoRetriesLeft();
+        failJobWithNoRetriesLeft();
 
         // then
         final SubscribedRecord activityEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_ACTIVATED);
-        final SubscribedRecord failedEvent = receiveFirstTaskEvent(TaskIntent.FAILED);
+        final SubscribedRecord failedEvent = receiveFirstJobEvent(JobIntent.FAILED);
         final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.CREATED);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
         assertThat(incidentEvent.value())
-            .containsEntry("errorType", ErrorType.TASK_NO_RETRIES.name())
+            .containsEntry("errorType", ErrorType.JOB_NO_RETRIES.name())
             .containsEntry("errorMessage", "No more retries left.")
             .containsEntry("failureEventPosition", failedEvent.position())
             .containsEntry("bpmnProcessId", "process")
             .containsEntry("workflowInstanceKey", workflowInstanceKey)
             .containsEntry("activityId", "failingTask")
             .containsEntry("activityInstanceKey", activityEvent.key())
-            .containsEntry("taskKey", failedEvent.key());
+            .containsEntry("jobKey", failedEvent.key());
     }
 
     @Test
-    public void shouldDeleteIncidentIfTaskRetriesIncreased()
+    public void shouldDeleteIncidentIfJobRetriesIncreased()
     {
         // given
         testClient.deploy(WORKFLOW_INPUT_MAPPING);
 
         final long workflowInstanceKey = testClient.createWorkflowInstance("process", PAYLOAD);
 
-        failTaskWithNoRetriesLeft();
+        failJobWithNoRetriesLeft();
 
         // when
-        updateTaskRetries();
+        updateJobRetries();
 
         // then
-        final SubscribedRecord taskEvent = receiveFirstTaskEvent(TaskIntent.FAILED);
+        final SubscribedRecord jobEvent = receiveFirstJobEvent(JobIntent.FAILED);
         final SubscribedRecord activityEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_ACTIVATED);
         SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.DELETE);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
         assertThat(incidentEvent.value())
-            .containsEntry("errorType", ErrorType.TASK_NO_RETRIES.name())
+            .containsEntry("errorType", ErrorType.JOB_NO_RETRIES.name())
             .containsEntry("errorMessage", "No more retries left.")
             .containsEntry("bpmnProcessId", "process")
             .containsEntry("workflowInstanceKey", workflowInstanceKey)
             .containsEntry("activityId", "failingTask")
             .containsEntry("activityInstanceKey", activityEvent.key())
-            .containsEntry("taskKey", taskEvent.key());
+            .containsEntry("jobKey", jobEvent.key());
 
         incidentEvent = receiveFirstIncidentEvent(IncidentIntent.DELETED);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
         assertThat(incidentEvent.value())
-            .containsEntry("errorType", ErrorType.TASK_NO_RETRIES.name())
+            .containsEntry("errorType", ErrorType.JOB_NO_RETRIES.name())
             .containsEntry("errorMessage", "No more retries left.")
             .containsEntry("bpmnProcessId", "process")
             .containsEntry("workflowInstanceKey", workflowInstanceKey)
             .containsEntry("activityId", "failingTask")
             .containsEntry("activityInstanceKey", activityEvent.key())
-            .containsEntry("taskKey", taskEvent.key());
+            .containsEntry("jobKey", jobEvent.key());
     }
 
     @Test
-    public void shouldDeleteIncidentIfTaskIsCanceled()
+    public void shouldDeleteIncidentIfJobIsCanceled()
     {
         // given
         testClient.deploy(WORKFLOW_INPUT_MAPPING);
 
         final long workflowInstanceKey = testClient.createWorkflowInstance("process", PAYLOAD);
 
-        failTaskWithNoRetriesLeft();
+        failJobWithNoRetriesLeft();
 
         final SubscribedRecord incidentCreatedEvent = receiveFirstIncidentEvent(IncidentIntent.CREATED);
 
@@ -888,81 +888,81 @@ public class IncidentTest
         cancelWorkflowInstance(workflowInstanceKey);
 
         // then
-        final SubscribedRecord taskEvent = receiveFirstTaskEvent(TaskIntent.FAILED);
+        final SubscribedRecord jobEvent = receiveFirstJobEvent(JobIntent.FAILED);
         SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.DELETE);
 
         assertThat(incidentEvent.key()).isEqualTo(incidentCreatedEvent.key());
         assertThat(incidentEvent.value())
-            .containsEntry("errorType", ErrorType.TASK_NO_RETRIES.name())
+            .containsEntry("errorType", ErrorType.JOB_NO_RETRIES.name())
             .containsEntry("errorMessage", "No more retries left.")
             .containsEntry("bpmnProcessId", "process")
             .containsEntry("workflowInstanceKey", workflowInstanceKey)
             .containsEntry("activityId", "failingTask")
             .containsEntry("activityInstanceKey", incidentEvent.value().get("activityInstanceKey"))
-            .containsEntry("taskKey", taskEvent.key());
+            .containsEntry("jobKey", jobEvent.key());
 
         incidentEvent = receiveFirstIncidentEvent(IncidentIntent.DELETED);
 
         assertThat(incidentEvent.key()).isEqualTo(incidentCreatedEvent.key());
         assertThat(incidentEvent.value())
-            .containsEntry("errorType", ErrorType.TASK_NO_RETRIES.name())
+            .containsEntry("errorType", ErrorType.JOB_NO_RETRIES.name())
             .containsEntry("errorMessage", "No more retries left.")
             .containsEntry("bpmnProcessId", "process")
             .containsEntry("workflowInstanceKey", workflowInstanceKey)
             .containsEntry("activityId", "failingTask")
             .containsEntry("activityInstanceKey", incidentEvent.value().get("activityInstanceKey"))
-            .containsEntry("taskKey", taskEvent.key());
+            .containsEntry("jobKey", jobEvent.key());
     }
 
     @Test
-    public void shouldCreateIncidentIfStandaloneTaskHasNoRetriesLeft()
+    public void shouldCreateIncidentIfStandaloneJobHasNoRetriesLeft()
     {
         // given
-        createStandaloneTask();
+        createStandaloneJob();
 
         // when
-        failTaskWithNoRetriesLeft();
+        failJobWithNoRetriesLeft();
 
         // then
-        final SubscribedRecord failedEvent = receiveFirstTaskEvent(TaskIntent.FAILED);
+        final SubscribedRecord failedEvent = receiveFirstJobEvent(JobIntent.FAILED);
         final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.CREATED);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
         assertThat(incidentEvent.value())
-            .containsEntry("errorType", ErrorType.TASK_NO_RETRIES.name())
+            .containsEntry("errorType", ErrorType.JOB_NO_RETRIES.name())
             .containsEntry("errorMessage", "No more retries left.")
             .containsEntry("failureEventPosition", failedEvent.position())
             .containsEntry("bpmnProcessId", "")
             .containsEntry("workflowInstanceKey", -1)
             .containsEntry("activityId", "")
             .containsEntry("activityInstanceKey", -1)
-            .containsEntry("taskKey", failedEvent.key());
+            .containsEntry("jobKey", failedEvent.key());
     }
 
     @Test
-    public void shouldDeleteStandaloneIncidentIfTaskRetriesIncreased()
+    public void shouldDeleteStandaloneIncidentIfJobRetriesIncreased()
     {
         // given
-        createStandaloneTask();
+        createStandaloneJob();
 
-        failTaskWithNoRetriesLeft();
+        failJobWithNoRetriesLeft();
 
         // when
-        updateTaskRetries();
+        updateJobRetries();
 
         // then
-        final SubscribedRecord taskEvent = receiveFirstTaskEvent(TaskIntent.FAILED);
+        final SubscribedRecord jobEvent = receiveFirstJobEvent(JobIntent.FAILED);
         final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.DELETED);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
         assertThat(incidentEvent.value())
-            .containsEntry("errorType", ErrorType.TASK_NO_RETRIES.name())
+            .containsEntry("errorType", ErrorType.JOB_NO_RETRIES.name())
             .containsEntry("errorMessage", "No more retries left.")
             .containsEntry("bpmnProcessId", "")
             .containsEntry("workflowInstanceKey", -1)
             .containsEntry("activityId", "")
             .containsEntry("activityInstanceKey", -1)
-            .containsEntry("taskKey", taskEvent.key());
+            .containsEntry("jobKey", jobEvent.key());
     }
 
     private SubscribedRecord receiveFirstIncidentEvent(IncidentIntent intent)
@@ -1009,40 +1009,40 @@ public class IncidentTest
             .get();
     }
 
-    private SubscribedRecord receiveFirstTaskEvent(TaskIntent intent)
+    private SubscribedRecord receiveFirstJobEvent(JobIntent intent)
     {
         return testClient.receiveEvents()
-            .ofTypeTask()
+            .ofTypeJob()
             .withIntent(intent)
             .getFirst();
     }
 
 
-    private void failTaskWithNoRetriesLeft()
+    private void failJobWithNoRetriesLeft()
     {
-        apiRule.openTaskSubscription("test").await();
+        apiRule.openJobSubscription("test").await();
 
-        final SubscribedRecord taskEvent = receiveFirstTaskEvent(TaskIntent.LOCKED);
+        final SubscribedRecord jobEvent = receiveFirstJobEvent(JobIntent.LOCKED);
 
         final ExecuteCommandResponse response = apiRule.createCmdRequest()
-            .key(taskEvent.key())
-            .type(ValueType.TASK, TaskIntent.FAIL)
+            .key(jobEvent.key())
+            .type(ValueType.JOB, JobIntent.FAIL)
             .command()
                 .put("retries", 0)
                 .put("type", "failingTask")
-                .put("lockOwner", taskEvent.value().get("lockOwner"))
-                .put("headers", taskEvent.value().get("headers"))
+                .put("lockOwner", jobEvent.value().get("lockOwner"))
+                .put("headers", jobEvent.value().get("headers"))
                 .done()
             .sendAndAwait();
 
         assertThat(response.recordType()).isEqualTo(RecordType.EVENT);
-        assertThat(response.intent()).isEqualTo(TaskIntent.FAILED);
+        assertThat(response.intent()).isEqualTo(JobIntent.FAILED);
     }
 
-    private void createStandaloneTask()
+    private void createStandaloneJob()
     {
         final ExecuteCommandResponse response = apiRule.createCmdRequest()
-            .type(ValueType.TASK, TaskIntent.CREATE)
+            .type(ValueType.JOB, JobIntent.CREATE)
             .command()
                 .put("type", "test")
                 .put("retries", 3)
@@ -1050,26 +1050,26 @@ public class IncidentTest
             .sendAndAwait();
 
         assertThat(response.recordType()).isEqualTo(RecordType.EVENT);
-        assertThat(response.intent()).isEqualTo(TaskIntent.CREATED);
+        assertThat(response.intent()).isEqualTo(JobIntent.CREATED);
     }
 
-    private void updateTaskRetries()
+    private void updateJobRetries()
     {
-        final SubscribedRecord taskEvent = receiveFirstTaskEvent(TaskIntent.FAILED);
+        final SubscribedRecord jobEvent = receiveFirstJobEvent(JobIntent.FAILED);
 
         final ExecuteCommandResponse response = apiRule.createCmdRequest()
-            .key(taskEvent.key())
-            .type(ValueType.TASK, TaskIntent.UPDATE_RETRIES)
+            .key(jobEvent.key())
+            .type(ValueType.JOB, JobIntent.UPDATE_RETRIES)
             .command()
                 .put("retries", 1)
                 .put("type", "test")
-                .put("lockOwner", taskEvent.value().get("lockOwner"))
-                .put("headers", taskEvent.value().get("headers"))
+                .put("lockOwner", jobEvent.value().get("lockOwner"))
+                .put("headers", jobEvent.value().get("headers"))
                 .done()
             .sendAndAwait();
 
         assertThat(response.recordType()).isEqualTo(RecordType.EVENT);
-        assertThat(response.intent()).isEqualTo(TaskIntent.RETRIES_UPDATED);
+        assertThat(response.intent()).isEqualTo(JobIntent.RETRIES_UPDATED);
     }
 
     private void updatePayload(final long workflowInstanceKey, final long activityInstanceKey, byte[] payload)
@@ -1086,7 +1086,6 @@ public class IncidentTest
         assertThat(response.recordType()).isEqualTo(RecordType.EVENT);
         assertThat(response.intent()).isEqualTo(WorkflowInstanceIntent.PAYLOAD_UPDATED);
     }
-
 
     private void updatePayload(long workflowInstanceKey, SubscribedRecord activityInstanceEvent, String payload) throws IOException
     {
@@ -1105,5 +1104,4 @@ public class IncidentTest
         assertThat(response.recordType()).isEqualTo(RecordType.EVENT);
         assertThat(response.intent()).isEqualTo(WorkflowInstanceIntent.CANCELED);
     }
-
 }

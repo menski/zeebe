@@ -24,7 +24,7 @@ import io.zeebe.broker.clustering.base.topology.RequestTopologyHandler;
 import io.zeebe.broker.clustering.base.topology.TopologyManager;
 import io.zeebe.broker.event.handler.RemoveTopicSubscriptionHandler;
 import io.zeebe.broker.event.processor.TopicSubscriptionService;
-import io.zeebe.broker.task.TaskSubscriptionManager;
+import io.zeebe.broker.job.JobSubscriptionManager;
 import io.zeebe.dispatcher.Dispatcher;
 import io.zeebe.servicecontainer.Injector;
 import io.zeebe.servicecontainer.Service;
@@ -38,7 +38,7 @@ public class ControlMessageHandlerManagerService implements Service<ControlMessa
 {
     protected final Injector<ServerTransport> transportInjector = new Injector<>();
     protected final Injector<Dispatcher> controlMessageBufferInjector = new Injector<>();
-    protected final Injector<TaskSubscriptionManager> taskSubscriptionManagerInjector = new Injector<>();
+    protected final Injector<JobSubscriptionManager> jobSubscriptionManagerInjector = new Injector<>();
     protected final Injector<TopicSubscriptionService> topicSubscriptionServiceInjector = new Injector<>();
     private final Injector<TopologyManager> topologyManagerInjector = new Injector<>();
 
@@ -52,15 +52,15 @@ public class ControlMessageHandlerManagerService implements Service<ControlMessa
         final ServerTransport transport = transportInjector.getValue();
         final ActorScheduler actorScheduler = context.getScheduler();
 
-        final TaskSubscriptionManager taskSubscriptionManager = taskSubscriptionManagerInjector.getValue();
+        final JobSubscriptionManager jobSubscriptionManager = jobSubscriptionManagerInjector.getValue();
         final TopicSubscriptionService topicSubscriptionService = topicSubscriptionServiceInjector.getValue();
 
         final ServerOutput output = transport.getOutput();
 
         final List<ControlMessageHandler> controlMessageHandlers = Arrays.asList(
-            new AddTaskSubscriptionHandler(output, taskSubscriptionManager),
-            new IncreaseTaskSubscriptionCreditsHandler(output, taskSubscriptionManager),
-            new RemoveTaskSubscriptionHandler(output, taskSubscriptionManager),
+            new AddJobSubscriptionHandler(output, jobSubscriptionManager),
+            new IncreaseJobSubscriptionCreditsHandler(output, jobSubscriptionManager),
+            new RemoveJobSubscriptionHandler(output, jobSubscriptionManager),
             new RemoveTopicSubscriptionHandler(output, topicSubscriptionService),
             new RequestTopologyHandler(output, topologyManagerInjector.getValue())
         );
@@ -96,9 +96,9 @@ public class ControlMessageHandlerManagerService implements Service<ControlMessa
         return controlMessageBufferInjector;
     }
 
-    public Injector<TaskSubscriptionManager> getTaskSubscriptionManagerInjector()
+    public Injector<JobSubscriptionManager> getJobSubscriptionManagerInjector()
     {
-        return taskSubscriptionManagerInjector;
+        return jobSubscriptionManagerInjector;
     }
 
     public Injector<TopicSubscriptionService> getTopicSubscriptionServiceInjector()

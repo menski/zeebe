@@ -33,6 +33,8 @@ import org.agrona.concurrent.UnsafeBuffer;
 
 import io.zeebe.broker.incident.data.ErrorType;
 import io.zeebe.broker.incident.data.IncidentRecord;
+import io.zeebe.broker.job.data.JobHeaders;
+import io.zeebe.broker.job.data.JobRecord;
 import io.zeebe.broker.logstreams.processor.StreamProcessorLifecycleAware;
 import io.zeebe.broker.logstreams.processor.TypedBatchWriter;
 import io.zeebe.broker.logstreams.processor.TypedRecord;
@@ -43,10 +45,8 @@ import io.zeebe.broker.logstreams.processor.TypedStreamProcessor;
 import io.zeebe.broker.logstreams.processor.TypedStreamReader;
 import io.zeebe.broker.logstreams.processor.TypedStreamWriter;
 import io.zeebe.broker.system.deployment.handler.CreateWorkflowResponseSender;
-import io.zeebe.broker.task.data.TaskRecord;
-import io.zeebe.broker.task.data.TaskHeaders;
-import io.zeebe.broker.workflow.data.WorkflowRecord;
 import io.zeebe.broker.workflow.data.WorkflowInstanceRecord;
+import io.zeebe.broker.workflow.data.WorkflowRecord;
 import io.zeebe.broker.workflow.map.ActivityInstanceMap;
 import io.zeebe.broker.workflow.map.DeployedWorkflow;
 import io.zeebe.broker.workflow.map.PayloadCache;
@@ -74,7 +74,7 @@ import io.zeebe.msgpack.mapping.MappingProcessor;
 import io.zeebe.protocol.clientapi.ValueType;
 import io.zeebe.protocol.intent.IncidentIntent;
 import io.zeebe.protocol.intent.Intent;
-import io.zeebe.protocol.intent.TaskIntent;
+import io.zeebe.protocol.intent.JobIntent;
 import io.zeebe.protocol.intent.WorkflowInstanceIntent;
 import io.zeebe.protocol.intent.WorkflowIntent;
 import io.zeebe.util.metrics.Metric;
@@ -82,7 +82,7 @@ import io.zeebe.util.metrics.MetricsManager;
 
 public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycleAware
 {
-    private static final UnsafeBuffer EMPTY_TASK_TYPE = new UnsafeBuffer("".getBytes());
+    private static final UnsafeBuffer EMPTY_JOB_TYPE = new UnsafeBuffer("".getBytes());
 
     private final Map<BpmnAspect, TypedRecordProcessor<WorkflowInstanceRecord>> aspectHandlers;
 
@@ -133,11 +133,11 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
             .onEvent(ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.END_EVENT_OCCURRED, this::getBpmnAspectHandler)
             .onEvent(ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.GATEWAY_ACTIVATED, this::getBpmnAspectHandler)
             .onEvent(ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.ACTIVITY_COMPLETED, this::getBpmnAspectHandler)
-            .onEvent(ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.CANCELED, (Consumer<WorkflowInstanceEvent>) (e) -> workflowInstanceEventCanceled.incrementOrdered())
-            .onEvent(ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.COMPLETED, (Consumer<WorkflowInstanceEvent>) (e) -> workflowInstanceEventCompleted.incrementOrdered())
+            .onEvent(ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.CANCELED, (Consumer<WorkflowInstanceRecord>) (e) -> workflowInstanceEventCanceled.incrementOrdered())
+            .onEvent(ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.COMPLETED, (Consumer<WorkflowInstanceRecord>) (e) -> workflowInstanceEventCompleted.incrementOrdered())
 
-            .onEvent(ValueType.TASK, TaskIntent.CREATED, new TaskCreatedProcessor())
-            .onEvent(ValueType.TASK, TaskIntent.COMPLETED, new TaskCompletedEventProcessor())
+            .onEvent(ValueType.JOB, JobIntent.CREATED, new JobCreatedProcessor())
+            .onEvent(ValueType.JOB, JobIntent.COMPLETED, new JobCompletedEventProcessor())
 
             .onCommand(ValueType.WORKFLOW, WorkflowIntent.CREATE, new WorkflowCreateEventProcessor())
             .onCommand(ValueType.WORKFLOW, WorkflowIntent.DELETE, new WorkflowDeleteEventProcessor())
@@ -754,7 +754,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
             activityInstanceMap
                 .newActivityInstance(record.getKey())
                 .setActivityId(workflowInstanceEvent.getActivityId())
-                .setTaskKey(-1L)
+                .setJobKey(-1L)
                 .write();
 
             if (!createsIncident && !isNilPayload(workflowInstanceEvent.getPayload()))
@@ -769,7 +769,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
 
     private final class ActivityActivatedEventProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
-        private final TaskRecord taskCommand = new TaskRecord();
+        private final JobRecord jobCommand = new JobRecord();
 
         @Override
         public void processRecord(TypedRecord<WorkflowInstanceRecord> record)
@@ -779,9 +779,9 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
             final ServiceTask serviceTask = getActivity(activityEvent.getWorkflowKey(), activityEvent.getActivityId());
             final TaskDefinition taskDefinition = serviceTask.getTaskDefinition();
 
-            taskCommand.reset();
+            jobCommand.reset();
 
-            taskCommand
+            jobCommand
                 .setType(taskDefinition.getTypeAsBuffer())
                 .setRetries(taskDefinition.getRetries())
                 .setPayload(activityEvent.getPayload())
@@ -797,38 +797,38 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
 
             if (!customHeaders.isEmpty())
             {
-                taskCommand.setCustomHeaders(customHeaders.asMsgpackEncoded());
+                jobCommand.setCustomHeaders(customHeaders.asMsgpackEncoded());
             }
         }
 
         @Override
         public long writeRecord(TypedRecord<WorkflowInstanceRecord> record, TypedStreamWriter writer)
         {
-            return writer.writeNewCommand(TaskIntent.CREATE, taskCommand);
+            return writer.writeNewCommand(JobIntent.CREATE, jobCommand);
         }
     }
 
-    private final class TaskCreatedProcessor implements TypedRecordProcessor<TaskRecord>
+    private final class JobCreatedProcessor implements TypedRecordProcessor<JobRecord>
     {
         private boolean isActive;
 
         @Override
-        public void processRecord(TypedRecord<TaskRecord> record)
+        public void processRecord(TypedRecord<JobRecord> record)
         {
             isActive = false;
 
-            final TaskHeaders taskHeaders = record.getValue().headers();
-            final long activityInstanceKey = taskHeaders.getActivityInstanceKey();
+            final JobHeaders jobHeaders = record.getValue().headers();
+            final long activityInstanceKey = jobHeaders.getActivityInstanceKey();
             if (activityInstanceKey > 0)
             {
-                final WorkflowInstance workflowInstance = workflowInstanceIndex.get(taskHeaders.getWorkflowInstanceKey());
+                final WorkflowInstance workflowInstance = workflowInstanceIndex.get(jobHeaders.getWorkflowInstanceKey());
 
                 isActive = workflowInstance != null && activityInstanceKey == workflowInstance.getActivityInstanceKey();
             }
         }
 
         @Override
-        public void updateState(TypedRecord<TaskRecord> record)
+        public void updateState(TypedRecord<JobRecord> record)
         {
             if (isActive)
             {
@@ -838,13 +838,13 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
 
                 activityInstanceMap
                     .wrapActivityInstanceKey(activityInstanceKey)
-                    .setTaskKey(record.getKey())
+                    .setJobKey(record.getKey())
                     .write();
             }
         }
     }
 
-    private final class TaskCompletedEventProcessor implements TypedRecordProcessor<TaskRecord>
+    private final class JobCompletedEventProcessor implements TypedRecordProcessor<JobRecord>
     {
         private final WorkflowInstanceRecord workflowInstanceEvent = new WorkflowInstanceRecord();
 
@@ -852,36 +852,36 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         private long activityInstanceKey;
 
         @Override
-        public void processRecord(TypedRecord<TaskRecord> record)
+        public void processRecord(TypedRecord<JobRecord> record)
         {
             activityCompleted = false;
 
-            final TaskRecord taskEvent = record.getValue();
-            final TaskHeaders taskHeaders = taskEvent.headers();
-            activityInstanceKey = taskHeaders.getActivityInstanceKey();
+            final JobRecord jobEvent = record.getValue();
+            final JobHeaders jobHeaders = jobEvent.headers();
+            activityInstanceKey = jobHeaders.getActivityInstanceKey();
 
-            if (taskHeaders.getWorkflowInstanceKey() > 0 && isTaskOpen(record.getKey(), activityInstanceKey))
+            if (jobHeaders.getWorkflowInstanceKey() > 0 && isJobOpen(record.getKey(), activityInstanceKey))
             {
                 workflowInstanceEvent
-                    .setBpmnProcessId(taskHeaders.getBpmnProcessId())
-                    .setVersion(taskHeaders.getWorkflowDefinitionVersion())
-                    .setWorkflowKey(taskHeaders.getWorkflowKey())
-                    .setWorkflowInstanceKey(taskHeaders.getWorkflowInstanceKey())
-                    .setActivityId(taskHeaders.getActivityId())
-                    .setPayload(taskEvent.getPayload());
+                    .setBpmnProcessId(jobHeaders.getBpmnProcessId())
+                    .setVersion(jobHeaders.getWorkflowDefinitionVersion())
+                    .setWorkflowKey(jobHeaders.getWorkflowKey())
+                    .setWorkflowInstanceKey(jobHeaders.getWorkflowInstanceKey())
+                    .setActivityId(jobHeaders.getActivityId())
+                    .setPayload(jobEvent.getPayload());
 
                 activityCompleted = true;
             }
         }
 
-        private boolean isTaskOpen(long taskKey, long activityInstanceKey)
+        private boolean isJobOpen(long jobKey, long activityInstanceKey)
         {
-            // task key = -1 when activity is left
-            return activityInstanceMap.wrapActivityInstanceKey(activityInstanceKey).getTaskKey() == taskKey;
+            // job key = -1 when activity is left
+            return activityInstanceMap.wrapActivityInstanceKey(activityInstanceKey).getJobKey() == jobKey;
         }
 
         @Override
-        public long writeRecord(TypedRecord<TaskRecord> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<JobRecord> record, TypedStreamWriter writer)
         {
             return activityCompleted ?
                     writer.writeFollowUpEvent(activityInstanceKey, WorkflowInstanceIntent.ACTIVITY_COMPLETING, workflowInstanceEvent) :
@@ -889,13 +889,13 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<TaskRecord> record)
+        public void updateState(TypedRecord<JobRecord> record)
         {
             if (activityCompleted)
             {
                 activityInstanceMap
                     .wrapActivityInstanceKey(activityInstanceKey)
-                    .setTaskKey(-1L)
+                    .setJobKey(-1L)
                     .write();
             }
         }
@@ -999,11 +999,11 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
     private final class CancelWorkflowInstanceProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
         private final WorkflowInstanceRecord activityInstanceEvent = new WorkflowInstanceRecord();
-        private final TaskRecord taskEvent = new TaskRecord();
+        private final JobRecord jobRecord = new JobRecord();
 
         private boolean isCanceled;
         private long activityInstanceKey;
-        private long taskKey;
+        private long jobKey;
 
         private TypedStreamReader reader;
         private TypedRecord<WorkflowInstanceRecord> workflowInstanceEvent;
@@ -1034,7 +1034,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
                 workflowInstanceEvent.getValue().setPayload(WorkflowInstanceRecord.NO_PAYLOAD);
 
                 activityInstanceKey = workflowInstance.getActivityInstanceKey();
-                taskKey = activityInstanceMap.wrapActivityInstanceKey(activityInstanceKey).getTaskKey();
+                jobKey = activityInstanceMap.wrapActivityInstanceKey(activityInstanceKey).getJobKey();
             }
         }
 
@@ -1048,11 +1048,11 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
 
                 final TypedBatchWriter batchWriter = writer.newBatch();
 
-                if (taskKey > 0)
+                if (jobKey > 0)
                 {
-                    taskEvent.reset();
-                    taskEvent
-                        .setType(EMPTY_TASK_TYPE)
+                    jobRecord.reset();
+                    jobRecord
+                        .setType(EMPTY_JOB_TYPE)
                         .headers()
                             .setBpmnProcessId(value.getBpmnProcessId())
                             .setWorkflowDefinitionVersion(value.getVersion())
@@ -1060,7 +1060,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
                             .setActivityId(activityInstanceMap.getActivityId())
                             .setActivityInstanceKey(activityInstanceKey);
 
-                    batchWriter.addFollowUpCommand(taskKey, TaskIntent.CANCEL, taskEvent);
+                    batchWriter.addFollowUpCommand(jobKey, JobIntent.CANCEL, jobRecord);
                 }
 
                 if (activityInstanceKey > 0)

@@ -35,9 +35,7 @@ import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflow;
 import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIterator;
 import io.zeebe.broker.system.deployment.handler.DeploymentTimer;
 import io.zeebe.broker.workflow.data.DeploymentRecord;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
 import io.zeebe.broker.workflow.data.WorkflowRecord;
-import io.zeebe.protocol.intent.Intent;
 import io.zeebe.protocol.intent.WorkflowIntent;
 
 public class DeploymentTimedOutProcessor implements TypedRecordProcessor<DeploymentRecord>
