@@ -23,7 +23,7 @@ import org.agrona.collections.Int2ObjectHashMap;
 import io.zeebe.broker.clustering.base.partitions.Partition;
 import io.zeebe.broker.system.deployment.message.CreateWorkflowRequest;
 import io.zeebe.broker.system.deployment.message.DeleteWorkflowMessage;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
+import io.zeebe.broker.workflow.data.WorkflowRecord;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.logstreams.log.LogStreamWriter;
 import io.zeebe.logstreams.log.LogStreamWriterImpl;
@@ -40,7 +40,7 @@ public class WorkflowRequestMessageHandler
     private final CreateWorkflowRequest createRequest = new CreateWorkflowRequest();
     private final DeleteWorkflowMessage deleteMessage = new DeleteWorkflowMessage();
 
-    private final WorkflowEvent workflowEvent = new WorkflowEvent();
+    private final WorkflowRecord workflowEvent = new WorkflowRecord();
     private final RecordMetadata recordMetadata = new RecordMetadata();
 
     private final DeferredCommandContext deferredContext = new DeferredCommandContext();

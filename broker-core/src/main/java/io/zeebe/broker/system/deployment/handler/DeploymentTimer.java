@@ -28,7 +28,7 @@ import io.zeebe.broker.logstreams.processor.TypedStreamReader;
 import io.zeebe.broker.logstreams.processor.TypedStreamWriter;
 import io.zeebe.broker.system.deployment.data.PendingDeployments;
 import io.zeebe.broker.system.deployment.data.PendingDeployments.PendingDeployment;
-import io.zeebe.broker.workflow.data.DeploymentEvent;
+import io.zeebe.broker.workflow.data.DeploymentRecord;
 import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.protocol.impl.RecordMetadata;
 import io.zeebe.util.sched.ActorControl;
@@ -103,7 +103,7 @@ public class DeploymentTimer implements StreamProcessorLifecycleAware
 
         if (deployment != null)
         {
-            final TypedRecord<DeploymentEvent> deploymentEvent = reader.readValue(deployment.getDeploymentEventPosition(), DeploymentEvent.class);
+            final TypedRecord<DeploymentRecord> deploymentEvent = reader.readValue(deployment.getDeploymentEventPosition(), DeploymentRecord.class);
             final RecordMetadata metadata = deploymentEvent.getMetadata();
 
             actor.runUntilDone(() ->

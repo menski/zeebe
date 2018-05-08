@@ -32,10 +32,10 @@ import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflow;
 import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIterator;
 import io.zeebe.broker.system.deployment.data.WorkflowVersions;
 import io.zeebe.broker.system.deployment.handler.RemoteWorkflowsManager;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
+import io.zeebe.broker.workflow.data.WorkflowRecord;
 import io.zeebe.protocol.clientapi.Intent;
 
-public class WorkflowDeleteProcessor implements TypedRecordProcessor<WorkflowEvent>
+public class WorkflowDeleteProcessor implements TypedRecordProcessor<WorkflowRecord>
 {
     private final PendingDeployments pendingDeployments;
     private final PendingWorkflows pendingWorkflows;
@@ -58,7 +58,7 @@ public class WorkflowDeleteProcessor implements TypedRecordProcessor<WorkflowEve
     }
 
     @Override
-    public void processRecord(TypedRecord<WorkflowEvent> command)
+    public void processRecord(TypedRecord<WorkflowRecord> command)
     {
         final long workflowKey = command.getKey();
 
@@ -79,7 +79,7 @@ public class WorkflowDeleteProcessor implements TypedRecordProcessor<WorkflowEve
     }
 
     @Override
-    public boolean executeSideEffects(TypedRecord<WorkflowEvent> command, TypedResponseWriter responseWriter)
+    public boolean executeSideEffects(TypedRecord<WorkflowRecord> command, TypedResponseWriter responseWriter)
     {
         return workflowMessageSender.deleteWorkflow(
                    partitionIds,
@@ -88,16 +88,16 @@ public class WorkflowDeleteProcessor implements TypedRecordProcessor<WorkflowEve
     }
 
     @Override
-    public long writeRecord(TypedRecord<WorkflowEvent> command, TypedStreamWriter writer)
+    public long writeRecord(TypedRecord<WorkflowRecord> command, TypedStreamWriter writer)
     {
         return writer.writeFollowUpEvent(command.getKey(), Intent.DELETED, command.getValue());
     }
 
     @Override
-    public void updateState(TypedRecord<WorkflowEvent> command)
+    public void updateState(TypedRecord<WorkflowRecord> command)
     {
         final long workflowKey = command.getKey();
-        final WorkflowEvent workflowEvent = command.getValue();
+        final WorkflowRecord workflowEvent = command.getValue();
 
         for (int partitionId : partitionIds)
         {

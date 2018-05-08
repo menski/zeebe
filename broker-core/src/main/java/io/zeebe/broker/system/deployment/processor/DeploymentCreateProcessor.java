@@ -42,10 +42,10 @@ import io.zeebe.broker.system.deployment.data.TopicPartitions.TopicPartition;
 import io.zeebe.broker.system.deployment.data.TopicPartitions.TopicPartitionIterator;
 import io.zeebe.broker.system.deployment.data.WorkflowVersions;
 import io.zeebe.broker.workflow.data.DeployedWorkflow;
-import io.zeebe.broker.workflow.data.DeploymentEvent;
+import io.zeebe.broker.workflow.data.DeploymentRecord;
 import io.zeebe.broker.workflow.data.DeploymentResource;
 import io.zeebe.broker.workflow.data.ResourceType;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
+import io.zeebe.broker.workflow.data.WorkflowRecord;
 import io.zeebe.model.bpmn.BpmnModelApi;
 import io.zeebe.model.bpmn.ValidationResult;
 import io.zeebe.model.bpmn.instance.Workflow;
@@ -56,13 +56,13 @@ import io.zeebe.protocol.impl.RecordMetadata;
 import io.zeebe.util.buffer.BufferUtil;
 import io.zeebe.util.collection.IntArrayListIterator;
 
-public class DeploymentCreateProcessor implements TypedRecordProcessor<DeploymentEvent>
+public class DeploymentCreateProcessor implements TypedRecordProcessor<DeploymentRecord>
 {
     private static final Logger LOG = Loggers.SYSTEM_LOGGER;
 
     private final BpmnModelApi bpmn = new BpmnModelApi();
 
-    private final WorkflowEvent workflowEvent = new WorkflowEvent();
+    private final WorkflowRecord workflowEvent = new WorkflowRecord();
 
     private final TopicPartitions topicPartitions;
     private final WorkflowVersions workflowVersions;
@@ -83,9 +83,9 @@ public class DeploymentCreateProcessor implements TypedRecordProcessor<Deploymen
     }
 
     @Override
-    public void processRecord(TypedRecord<DeploymentEvent> command)
+    public void processRecord(TypedRecord<DeploymentRecord> command)
     {
-        final DeploymentEvent deploymentEvent = command.getValue();
+        final DeploymentRecord deploymentEvent = command.getValue();
         final DirectBuffer topicName = deploymentEvent.getTopicName();
 
         success = false;
@@ -147,7 +147,7 @@ public class DeploymentCreateProcessor implements TypedRecordProcessor<Deploymen
         return false;
     }
 
-    private boolean readAndValidateWorkflows(final DeploymentEvent deploymentEvent)
+    private boolean readAndValidateWorkflows(final DeploymentRecord deploymentEvent)
     {
         final DirectBuffer topicName = deploymentEvent.getTopicName();
         final StringBuilder validationErrors = new StringBuilder();
@@ -266,7 +266,7 @@ public class DeploymentCreateProcessor implements TypedRecordProcessor<Deploymen
     }
 
     @Override
-    public boolean executeSideEffects(TypedRecord<DeploymentEvent> command, TypedResponseWriter responseWriter)
+    public boolean executeSideEffects(TypedRecord<DeploymentRecord> command, TypedResponseWriter responseWriter)
     {
         if (!success)
         {
@@ -279,9 +279,9 @@ public class DeploymentCreateProcessor implements TypedRecordProcessor<Deploymen
     }
 
     @Override
-    public long writeRecord(TypedRecord<DeploymentEvent> command, TypedStreamWriter writer)
+    public long writeRecord(TypedRecord<DeploymentRecord> command, TypedStreamWriter writer)
     {
-        final DeploymentEvent deploymentEvent = command.getValue();
+        final DeploymentRecord deploymentEvent = command.getValue();
 
         if (!success)
         {
@@ -313,9 +313,9 @@ public class DeploymentCreateProcessor implements TypedRecordProcessor<Deploymen
     }
 
     @Override
-    public void updateState(TypedRecord<DeploymentEvent> command)
+    public void updateState(TypedRecord<DeploymentRecord> command)
     {
-        final DeploymentEvent deploymentEvent = command.getValue();
+        final DeploymentRecord deploymentEvent = command.getValue();
 
         if (success)
         {
@@ -345,7 +345,7 @@ public class DeploymentCreateProcessor implements TypedRecordProcessor<Deploymen
 
         private int currentResource = 0;
 
-        public void wrap(DeploymentEvent deploymentEvent)
+        public void wrap(DeploymentRecord deploymentEvent)
         {
             this.deployedWorkflows = deploymentEvent.deployedWorkflows();
             this.deploymentResources = deploymentEvent.resources();

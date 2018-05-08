@@ -33,11 +33,11 @@ import io.zeebe.broker.system.deployment.data.PendingWorkflows;
 import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflow;
 import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIterator;
 import io.zeebe.broker.system.deployment.handler.DeploymentTimer;
-import io.zeebe.broker.workflow.data.DeploymentEvent;
+import io.zeebe.broker.workflow.data.DeploymentRecord;
 import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.util.buffer.BufferUtil;
 
-public class DeploymentDistributedProcessor implements TypedRecordProcessor<DeploymentEvent>
+public class DeploymentDistributedProcessor implements TypedRecordProcessor<DeploymentRecord>
 {
     private final ExpandableArrayBuffer buffer = new ExpandableArrayBuffer(3 * (SIZE_OF_LONG + SIZE_OF_INT));
 
@@ -56,7 +56,7 @@ public class DeploymentDistributedProcessor implements TypedRecordProcessor<Depl
 
 
     @Override
-    public void processRecord(TypedRecord<DeploymentEvent> event)
+    public void processRecord(TypedRecord<DeploymentRecord> event)
     {
         final PendingDeployment pendingDeployment = pendingDeployments.get(event.getKey());
         deploymentCreated = pendingDeployment != null && !pendingDeployment.isResolved(); // could have timed out already
@@ -75,7 +75,7 @@ public class DeploymentDistributedProcessor implements TypedRecordProcessor<Depl
     }
 
     @Override
-    public boolean executeSideEffects(TypedRecord<DeploymentEvent> event, TypedResponseWriter responseWriter)
+    public boolean executeSideEffects(TypedRecord<DeploymentRecord> event, TypedResponseWriter responseWriter)
     {
         if (deploymentCreated)
         {
@@ -88,7 +88,7 @@ public class DeploymentDistributedProcessor implements TypedRecordProcessor<Depl
     }
 
     @Override
-    public long writeRecord(TypedRecord<DeploymentEvent> event, TypedStreamWriter writer)
+    public long writeRecord(TypedRecord<DeploymentRecord> event, TypedStreamWriter writer)
     {
         if (deploymentCreated)
         {
@@ -101,7 +101,7 @@ public class DeploymentDistributedProcessor implements TypedRecordProcessor<Depl
     }
 
     @Override
-    public void updateState(TypedRecord<DeploymentEvent> event)
+    public void updateState(TypedRecord<DeploymentRecord> event)
     {
         final long deploymentKey = event.getKey();
 

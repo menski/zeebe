@@ -17,8 +17,8 @@
  */
 package io.zeebe.broker.workflow.data;
 
-import static io.zeebe.broker.workflow.data.WorkflowInstanceEvent.PROP_WORKFLOW_BPMN_PROCESS_ID;
-import static io.zeebe.broker.workflow.data.WorkflowInstanceEvent.PROP_WORKFLOW_VERSION;
+import static io.zeebe.broker.workflow.data.WorkflowInstanceRecord.PROP_WORKFLOW_BPMN_PROCESS_ID;
+import static io.zeebe.broker.workflow.data.WorkflowInstanceRecord.PROP_WORKFLOW_VERSION;
 
 import io.zeebe.msgpack.UnpackedObject;
 import org.agrona.DirectBuffer;

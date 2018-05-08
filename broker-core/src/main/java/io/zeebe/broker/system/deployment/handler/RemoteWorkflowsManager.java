@@ -43,8 +43,8 @@ import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIt
 import io.zeebe.broker.system.deployment.message.CreateWorkflowRequest;
 import io.zeebe.broker.system.deployment.message.CreateWorkflowResponse;
 import io.zeebe.broker.system.deployment.message.DeleteWorkflowMessage;
-import io.zeebe.broker.workflow.data.DeploymentEvent;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
+import io.zeebe.broker.workflow.data.DeploymentRecord;
+import io.zeebe.broker.workflow.data.WorkflowRecord;
 import io.zeebe.protocol.clientapi.Intent;
 import io.zeebe.protocol.impl.RecordMetadata;
 import io.zeebe.transport.ClientOutput;
@@ -103,7 +103,7 @@ public class RemoteWorkflowsManager implements StreamProcessorLifecycleAware
     public boolean distributeWorkflow(
             IntArrayList partitionIds,
             long workflowKey,
-            WorkflowEvent event)
+            WorkflowRecord event)
     {
         final CreateWorkflowRequest createRequest = new CreateWorkflowRequest()
             .workflowKey(workflowKey)
@@ -127,7 +127,7 @@ public class RemoteWorkflowsManager implements StreamProcessorLifecycleAware
     public boolean deleteWorkflow(
             IntArrayList partitionIds,
             long workflowKey,
-            WorkflowEvent event)
+            WorkflowRecord event)
     {
         deleteMessage
             .workflowKey(workflowKey)
@@ -218,7 +218,7 @@ public class RemoteWorkflowsManager implements StreamProcessorLifecycleAware
             if (isDeploymentDistributed(deploymentKey))
             {
                 final PendingDeployment pendingDeployment = pendingDeployments.get(deploymentKey);
-                final TypedRecord<DeploymentEvent> event = reader.readValue(pendingDeployment.getDeploymentEventPosition(), DeploymentEvent.class);
+                final TypedRecord<DeploymentRecord> event = reader.readValue(pendingDeployment.getDeploymentEventPosition(), DeploymentRecord.class);
 
                 final RecordMetadata metadata = event.getMetadata();
 

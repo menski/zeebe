@@ -32,7 +32,7 @@ import org.agrona.collections.LongArrayList;
 import org.agrona.concurrent.UnsafeBuffer;
 
 import io.zeebe.broker.incident.data.ErrorType;
-import io.zeebe.broker.incident.data.IncidentEvent;
+import io.zeebe.broker.incident.data.IncidentRecord;
 import io.zeebe.broker.logstreams.processor.StreamProcessorLifecycleAware;
 import io.zeebe.broker.logstreams.processor.TypedBatchWriter;
 import io.zeebe.broker.logstreams.processor.TypedRecord;
@@ -43,10 +43,10 @@ import io.zeebe.broker.logstreams.processor.TypedStreamProcessor;
 import io.zeebe.broker.logstreams.processor.TypedStreamReader;
 import io.zeebe.broker.logstreams.processor.TypedStreamWriter;
 import io.zeebe.broker.system.deployment.handler.CreateWorkflowResponseSender;
-import io.zeebe.broker.task.data.TaskEvent;
+import io.zeebe.broker.task.data.TaskRecord;
 import io.zeebe.broker.task.data.TaskHeaders;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
-import io.zeebe.broker.workflow.data.WorkflowInstanceEvent;
+import io.zeebe.broker.workflow.data.WorkflowRecord;
+import io.zeebe.broker.workflow.data.WorkflowInstanceRecord;
 import io.zeebe.broker.workflow.map.ActivityInstanceMap;
 import io.zeebe.broker.workflow.map.DeployedWorkflow;
 import io.zeebe.broker.workflow.map.PayloadCache;
@@ -80,7 +80,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
 {
     private static final UnsafeBuffer EMPTY_TASK_TYPE = new UnsafeBuffer("".getBytes());
 
-    private final Map<BpmnAspect, TypedRecordProcessor<WorkflowInstanceEvent>> aspectHandlers;
+    private final Map<BpmnAspect, TypedRecordProcessor<WorkflowInstanceRecord>> aspectHandlers;
 
     private Metric workflowInstanceEventCreate;
     private Metric workflowInstanceEventCanceled;
@@ -129,8 +129,8 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
             .onEvent(ValueType.WORKFLOW_INSTANCE, Intent.END_EVENT_OCCURRED, this::getBpmnAspectHandler)
             .onEvent(ValueType.WORKFLOW_INSTANCE, Intent.GATEWAY_ACTIVATED, this::getBpmnAspectHandler)
             .onEvent(ValueType.WORKFLOW_INSTANCE, Intent.ACTIVITY_COMPLETED, this::getBpmnAspectHandler)
-            .onEvent(ValueType.WORKFLOW_INSTANCE, Intent.CANCELED, (Consumer<WorkflowInstanceEvent>) (e) -> workflowInstanceEventCanceled.incrementOrdered())
-            .onEvent(ValueType.WORKFLOW_INSTANCE, Intent.COMPLETED, (Consumer<WorkflowInstanceEvent>) (e) -> workflowInstanceEventCompleted.incrementOrdered())
+            .onEvent(ValueType.WORKFLOW_INSTANCE, Intent.CANCELED, (Consumer<WorkflowInstanceRecord>) (e) -> workflowInstanceEventCanceled.incrementOrdered())
+            .onEvent(ValueType.WORKFLOW_INSTANCE, Intent.COMPLETED, (Consumer<WorkflowInstanceRecord>) (e) -> workflowInstanceEventCompleted.incrementOrdered())
 
             .onEvent(ValueType.TASK, Intent.CREATED, new TaskCreatedProcessor())
             .onEvent(ValueType.TASK, Intent.COMPLETED, new TaskCompletedEventProcessor())
@@ -210,7 +210,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         return workflowInstance != null && workflowInstance.getTokenCount() > 0;
     }
 
-    private TypedRecordProcessor<WorkflowInstanceEvent> getBpmnAspectHandler(WorkflowInstanceEvent workflowInstanceEvent)
+    private TypedRecordProcessor<WorkflowInstanceRecord> getBpmnAspectHandler(WorkflowInstanceRecord workflowInstanceEvent)
     {
         final boolean isActive = isActive(workflowInstanceEvent.getWorkflowInstanceKey());
 
@@ -225,7 +225,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class WorkflowCreateEventProcessor implements TypedRecordProcessor<WorkflowEvent>
+    private final class WorkflowCreateEventProcessor implements TypedRecordProcessor<WorkflowRecord>
     {
         private boolean isNewWorkflow;
         private int partitionId;
@@ -237,13 +237,13 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void processRecord(TypedRecord<WorkflowEvent> command)
+        public void processRecord(TypedRecord<WorkflowRecord> command)
         {
             isNewWorkflow = !workflowDeploymentCache.hasWorkflow(command.getKey());
         }
 
         @Override
-        public boolean executeSideEffects(TypedRecord<WorkflowEvent> command, TypedResponseWriter responseWriter)
+        public boolean executeSideEffects(TypedRecord<WorkflowRecord> command, TypedResponseWriter responseWriter)
         {
             return workflowResponseSender.sendCreateWorkflowResponse(
                     partitionId,
@@ -254,7 +254,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowEvent> command, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowRecord> command, TypedStreamWriter writer)
         {
             if (isNewWorkflow)
             {
@@ -267,7 +267,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<WorkflowEvent> command)
+        public void updateState(TypedRecord<WorkflowRecord> command)
         {
             if (isNewWorkflow)
             {
@@ -276,15 +276,15 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class WorkflowDeleteEventProcessor implements TypedRecordProcessor<WorkflowEvent>
+    private final class WorkflowDeleteEventProcessor implements TypedRecordProcessor<WorkflowRecord>
     {
 
-        private final WorkflowInstanceEvent workflowInstanceRecord = new WorkflowInstanceEvent();
+        private final WorkflowInstanceRecord workflowInstanceRecord = new WorkflowInstanceRecord();
         private boolean isDeleted;
         private final LongArrayList workflowInstanceKeys = new LongArrayList();
 
         @Override
-        public void processRecord(TypedRecord<WorkflowEvent> command)
+        public void processRecord(TypedRecord<WorkflowRecord> command)
         {
             isDeleted = workflowDeploymentCache.getWorkflow(command.getKey()) != null;
 
@@ -311,7 +311,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowEvent> command, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowRecord> command, TypedStreamWriter writer)
         {
             if (isDeleted)
             {
@@ -321,7 +321,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
 
                 if (!workflowInstanceKeys.isEmpty())
                 {
-                    final WorkflowEvent workflowEvent = command.getValue();
+                    final WorkflowRecord workflowEvent = command.getValue();
 
                     workflowInstanceRecord
                         .setWorkflowKey(command.getKey())
@@ -346,11 +346,11 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<WorkflowEvent> command)
+        public void updateState(TypedRecord<WorkflowRecord> command)
         {
             if (isDeleted)
             {
-                final WorkflowEvent value = command.getValue();
+                final WorkflowRecord value = command.getValue();
                 final DirectBuffer bpmnProcessId = value.getBpmnProcessId();
                 final int version = value.getVersion();
 
@@ -359,16 +359,16 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class CreateWorkflowInstanceEventProcessor implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class CreateWorkflowInstanceEventProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
         private boolean success;
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> command)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> command)
         {
             success = false;
 
-            final WorkflowInstanceEvent workflowInstanceEvent = command.getValue();
+            final WorkflowInstanceRecord workflowInstanceEvent = command.getValue();
 
             long workflowKey = workflowInstanceEvent.getWorkflowKey();
             final DirectBuffer bpmnProcessId = workflowInstanceEvent.getBpmnProcessId();
@@ -405,7 +405,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public boolean executeSideEffects(TypedRecord<WorkflowInstanceEvent> command, TypedResponseWriter responseWriter)
+        public boolean executeSideEffects(TypedRecord<WorkflowInstanceRecord> command, TypedResponseWriter responseWriter)
         {
             if (success)
             {
@@ -418,7 +418,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> command, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> command, TypedStreamWriter writer)
         {
             if (success)
             {
@@ -431,15 +431,15 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class WorkflowInstanceCreatedEventProcessor implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class WorkflowInstanceCreatedEventProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> record)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> record)
         {
             workflowInstanceEventCreate.incrementOrdered();
 
-            final WorkflowInstanceEvent workflowInstanceEvent = record.getValue();
+            final WorkflowInstanceRecord workflowInstanceEvent = record.getValue();
 
             final long workflowKey = workflowInstanceEvent.getWorkflowKey();
             final DeployedWorkflow deployedWorkflow = workflowDeploymentCache.getWorkflow(workflowKey);
@@ -461,13 +461,13 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> record, TypedStreamWriter writer)
         {
             return writer.writeNewEvent(Intent.START_EVENT_OCCURRED, record.getValue());
         }
 
         @Override
-        public void updateState(TypedRecord<WorkflowInstanceEvent> record)
+        public void updateState(TypedRecord<WorkflowInstanceRecord> record)
         {
             workflowInstanceIndex
                 .newWorkflowInstance(record.getKey())
@@ -479,12 +479,12 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class TakeSequenceFlowAspectHandler implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class TakeSequenceFlowAspectHandler implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> record)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> record)
         {
-            final WorkflowInstanceEvent workflowInstanceEvent = record.getValue();
+            final WorkflowInstanceRecord workflowInstanceEvent = record.getValue();
 
             final FlowNode flowNode = getActivity(
                     workflowInstanceEvent.getWorkflowKey(), workflowInstanceEvent.getActivityId());
@@ -496,22 +496,22 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> record, TypedStreamWriter writer)
         {
             return writer.writeNewEvent(Intent.SEQUENCE_FLOW_TAKEN, record.getValue());
         }
     }
 
-    private final class ExclusiveSplitAspectHandler implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class ExclusiveSplitAspectHandler implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
         private boolean createsIncident;
         private boolean isResolvingIncident;
-        private final IncidentEvent incidentCommand = new IncidentEvent();
+        private final IncidentRecord incidentCommand = new IncidentRecord();
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> record)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> record)
         {
-            final WorkflowInstanceEvent workflowInstanceEvent = record.getValue();
+            final WorkflowInstanceRecord workflowInstanceEvent = record.getValue();
 
             createsIncident = false;
             isResolvingIncident = record.getMetadata().hasIncidentKey();
@@ -569,7 +569,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> record, TypedStreamWriter writer)
         {
             if (!createsIncident)
             {
@@ -589,15 +589,15 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class ConsumeTokenAspectHandler implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class ConsumeTokenAspectHandler implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
         private boolean isCompleted;
         private int activeTokenCount;
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> record)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> record)
         {
-            final WorkflowInstanceEvent workflowInstanceEvent = record.getValue();
+            final WorkflowInstanceRecord workflowInstanceEvent = record.getValue();
 
             final WorkflowInstance workflowInstance = workflowInstanceIndex
                     .get(workflowInstanceEvent.getWorkflowInstanceKey());
@@ -611,7 +611,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> record, TypedStreamWriter writer)
         {
             if (isCompleted)
             {
@@ -624,7 +624,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<WorkflowInstanceEvent> record)
+        public void updateState(TypedRecord<WorkflowInstanceRecord> record)
         {
             if (isCompleted)
             {
@@ -635,14 +635,14 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class SequenceFlowTakenEventProcessor implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class SequenceFlowTakenEventProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
         private Intent nextState;
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> record)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> record)
         {
-            final WorkflowInstanceEvent sequenceFlowEvent = record.getValue();
+            final WorkflowInstanceRecord sequenceFlowEvent = record.getValue();
 
             final SequenceFlow sequenceFlow = getActivity(sequenceFlowEvent.getWorkflowKey(), sequenceFlowEvent.getActivityId());
             final FlowNode targetNode = sequenceFlow.getTargetNode();
@@ -668,27 +668,27 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> record, TypedStreamWriter writer)
         {
             return writer.writeNewEvent(nextState, record.getValue());
         }
     }
 
-    private final class ActivityReadyEventProcessor implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class ActivityReadyEventProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
-        private final IncidentEvent incidentCommand = new IncidentEvent();
+        private final IncidentRecord incidentCommand = new IncidentRecord();
 
         private boolean createsIncident;
         private boolean isResolvingIncident;
         private UnsafeBuffer wfInstancePayload = new UnsafeBuffer(0, 0);
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> record)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> record)
         {
             createsIncident = false;
             isResolvingIncident = record.getMetadata().hasIncidentKey();
 
-            final WorkflowInstanceEvent activityEvent = record.getValue();
+            final WorkflowInstanceRecord activityEvent = record.getValue();
             wfInstancePayload.wrap(activityEvent.getPayload());
 
             final ServiceTask serviceTask = getActivity(activityEvent.getWorkflowKey(), activityEvent.getActivityId());
@@ -718,7 +718,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> record, TypedStreamWriter writer)
         {
             if (!createsIncident)
             {
@@ -738,9 +738,9 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<WorkflowInstanceEvent> record)
+        public void updateState(TypedRecord<WorkflowInstanceRecord> record)
         {
-            final WorkflowInstanceEvent workflowInstanceEvent = record.getValue();
+            final WorkflowInstanceRecord workflowInstanceEvent = record.getValue();
 
             workflowInstanceIndex
                 .get(workflowInstanceEvent.getWorkflowInstanceKey())
@@ -763,14 +763,14 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class ActivityActivatedEventProcessor implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class ActivityActivatedEventProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
-        private final TaskEvent taskCommand = new TaskEvent();
+        private final TaskRecord taskCommand = new TaskRecord();
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> record)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> record)
         {
-            final WorkflowInstanceEvent activityEvent = record.getValue();
+            final WorkflowInstanceRecord activityEvent = record.getValue();
 
             final ServiceTask serviceTask = getActivity(activityEvent.getWorkflowKey(), activityEvent.getActivityId());
             final TaskDefinition taskDefinition = serviceTask.getTaskDefinition();
@@ -798,18 +798,18 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> record, TypedStreamWriter writer)
         {
             return writer.writeNewCommand(Intent.CREATE, taskCommand);
         }
     }
 
-    private final class TaskCreatedProcessor implements TypedRecordProcessor<TaskEvent>
+    private final class TaskCreatedProcessor implements TypedRecordProcessor<TaskRecord>
     {
         private boolean isActive;
 
         @Override
-        public void processRecord(TypedRecord<TaskEvent> record)
+        public void processRecord(TypedRecord<TaskRecord> record)
         {
             isActive = false;
 
@@ -824,7 +824,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<TaskEvent> record)
+        public void updateState(TypedRecord<TaskRecord> record)
         {
             if (isActive)
             {
@@ -840,19 +840,19 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class TaskCompletedEventProcessor implements TypedRecordProcessor<TaskEvent>
+    private final class TaskCompletedEventProcessor implements TypedRecordProcessor<TaskRecord>
     {
-        private final WorkflowInstanceEvent workflowInstanceEvent = new WorkflowInstanceEvent();
+        private final WorkflowInstanceRecord workflowInstanceEvent = new WorkflowInstanceRecord();
 
         private boolean activityCompleted;
         private long activityInstanceKey;
 
         @Override
-        public void processRecord(TypedRecord<TaskEvent> record)
+        public void processRecord(TypedRecord<TaskRecord> record)
         {
             activityCompleted = false;
 
-            final TaskEvent taskEvent = record.getValue();
+            final TaskRecord taskEvent = record.getValue();
             final TaskHeaders taskHeaders = taskEvent.headers();
             activityInstanceKey = taskHeaders.getActivityInstanceKey();
 
@@ -877,7 +877,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<TaskEvent> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<TaskRecord> record, TypedStreamWriter writer)
         {
             return activityCompleted ?
                     writer.writeFollowUpEvent(activityInstanceKey, Intent.ACTIVITY_COMPLETING, workflowInstanceEvent) :
@@ -885,7 +885,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<TaskEvent> record)
+        public void updateState(TypedRecord<TaskRecord> record)
         {
             if (activityCompleted)
             {
@@ -897,19 +897,19 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class ActivityCompletingEventProcessor implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class ActivityCompletingEventProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
-        private final IncidentEvent incidentCommand = new IncidentEvent();
+        private final IncidentRecord incidentCommand = new IncidentRecord();
         private boolean hasIncident;
         private boolean isResolvingIncident;
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> record)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> record)
         {
             hasIncident = false;
             isResolvingIncident = record.getMetadata().hasIncidentKey();
 
-            final WorkflowInstanceEvent activityEvent = record.getValue();
+            final WorkflowInstanceRecord activityEvent = record.getValue();
 
             final ServiceTask serviceTask = getActivity(activityEvent.getWorkflowKey(), activityEvent.getActivityId());
             final Mapping[] outputMappings = serviceTask.getInputOutputMapping().getOutputMappings();
@@ -958,7 +958,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> record, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> record, TypedStreamWriter writer)
         {
             if (!hasIncident)
             {
@@ -979,7 +979,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<WorkflowInstanceEvent> record)
+        public void updateState(TypedRecord<WorkflowInstanceRecord> record)
         {
             if (!hasIncident)
             {
@@ -993,17 +993,17 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class CancelWorkflowInstanceProcessor implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class CancelWorkflowInstanceProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
-        private final WorkflowInstanceEvent activityInstanceEvent = new WorkflowInstanceEvent();
-        private final TaskEvent taskEvent = new TaskEvent();
+        private final WorkflowInstanceRecord activityInstanceEvent = new WorkflowInstanceRecord();
+        private final TaskRecord taskEvent = new TaskRecord();
 
         private boolean isCanceled;
         private long activityInstanceKey;
         private long taskKey;
 
         private TypedStreamReader reader;
-        private TypedRecord<WorkflowInstanceEvent> workflowInstanceEvent;
+        private TypedRecord<WorkflowInstanceRecord> workflowInstanceEvent;
 
         @Override
         public void onOpen(TypedStreamProcessor streamProcessor)
@@ -1018,7 +1018,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> command)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> command)
         {
             final WorkflowInstance workflowInstance = workflowInstanceIndex.get(command.getKey());
 
@@ -1026,9 +1026,9 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
 
             if (isCanceled)
             {
-                workflowInstanceEvent = reader.readValue(workflowInstance.getPosition(), WorkflowInstanceEvent.class);
+                workflowInstanceEvent = reader.readValue(workflowInstance.getPosition(), WorkflowInstanceRecord.class);
 
-                workflowInstanceEvent.getValue().setPayload(WorkflowInstanceEvent.NO_PAYLOAD);
+                workflowInstanceEvent.getValue().setPayload(WorkflowInstanceRecord.NO_PAYLOAD);
 
                 activityInstanceKey = workflowInstance.getActivityInstanceKey();
                 taskKey = activityInstanceMap.wrapActivityInstanceKey(activityInstanceKey).getTaskKey();
@@ -1036,12 +1036,12 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> command, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> command, TypedStreamWriter writer)
         {
             if (isCanceled)
             {
                 activityInstanceMap.wrapActivityInstanceKey(activityInstanceKey);
-                final WorkflowInstanceEvent value = workflowInstanceEvent.getValue();
+                final WorkflowInstanceRecord value = workflowInstanceEvent.getValue();
 
                 final TypedBatchWriter batchWriter = writer.newBatch();
 
@@ -1083,7 +1083,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public boolean executeSideEffects(TypedRecord<WorkflowInstanceEvent> record, TypedResponseWriter responseWriter)
+        public boolean executeSideEffects(TypedRecord<WorkflowInstanceRecord> record, TypedResponseWriter responseWriter)
         {
             if (isCanceled)
             {
@@ -1096,7 +1096,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<WorkflowInstanceEvent> record)
+        public void updateState(TypedRecord<WorkflowInstanceRecord> record)
         {
             if (isCanceled)
             {
@@ -1107,14 +1107,14 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
     }
 
-    private final class UpdatePayloadProcessor implements TypedRecordProcessor<WorkflowInstanceEvent>
+    private final class UpdatePayloadProcessor implements TypedRecordProcessor<WorkflowInstanceRecord>
     {
         private boolean isUpdated;
 
         @Override
-        public void processRecord(TypedRecord<WorkflowInstanceEvent> command)
+        public void processRecord(TypedRecord<WorkflowInstanceRecord> command)
         {
-            final WorkflowInstanceEvent workflowInstanceEvent = command.getValue();
+            final WorkflowInstanceRecord workflowInstanceEvent = command.getValue();
 
             final WorkflowInstance workflowInstance = workflowInstanceIndex.get(workflowInstanceEvent.getWorkflowInstanceKey());
             final boolean isActive = workflowInstance != null && workflowInstance.getTokenCount() > 0;
@@ -1123,7 +1123,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public boolean executeSideEffects(TypedRecord<WorkflowInstanceEvent> command, TypedResponseWriter responseWriter)
+        public boolean executeSideEffects(TypedRecord<WorkflowInstanceRecord> command, TypedResponseWriter responseWriter)
         {
             if (isUpdated)
             {
@@ -1136,7 +1136,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public long writeRecord(TypedRecord<WorkflowInstanceEvent> command, TypedStreamWriter writer)
+        public long writeRecord(TypedRecord<WorkflowInstanceRecord> command, TypedStreamWriter writer)
         {
             if (isUpdated)
             {
@@ -1149,11 +1149,11 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessorLifecycle
         }
 
         @Override
-        public void updateState(TypedRecord<WorkflowInstanceEvent> command)
+        public void updateState(TypedRecord<WorkflowInstanceRecord> command)
         {
             if (isUpdated)
             {
-                final WorkflowInstanceEvent workflowInstanceEvent = command.getValue();
+                final WorkflowInstanceRecord workflowInstanceEvent = command.getValue();
                 payloadCache.addPayload(workflowInstanceEvent.getWorkflowInstanceKey(), command.getPosition(), workflowInstanceEvent.getPayload());
             }
         }

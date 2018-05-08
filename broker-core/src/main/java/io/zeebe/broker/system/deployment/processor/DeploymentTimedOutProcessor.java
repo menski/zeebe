@@ -34,11 +34,11 @@ import io.zeebe.broker.system.deployment.data.PendingWorkflows;
 import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflow;
 import io.zeebe.broker.system.deployment.data.PendingWorkflows.PendingWorkflowIterator;
 import io.zeebe.broker.system.deployment.handler.DeploymentTimer;
-import io.zeebe.broker.workflow.data.DeploymentEvent;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
+import io.zeebe.broker.workflow.data.DeploymentRecord;
+import io.zeebe.broker.workflow.data.WorkflowRecord;
 import io.zeebe.protocol.clientapi.Intent;
 
-public class DeploymentTimedOutProcessor implements TypedRecordProcessor<DeploymentEvent>
+public class DeploymentTimedOutProcessor implements TypedRecordProcessor<DeploymentRecord>
 {
     private static final Logger LOG = Loggers.SYSTEM_LOGGER;
 
@@ -68,7 +68,7 @@ public class DeploymentTimedOutProcessor implements TypedRecordProcessor<Deploym
     }
 
     @Override
-    public void processRecord(TypedRecord<DeploymentEvent> event)
+    public void processRecord(TypedRecord<DeploymentRecord> event)
     {
         final PendingDeployment pendingDeployment = pendingDeployments.get(event.getKey());
 
@@ -109,7 +109,7 @@ public class DeploymentTimedOutProcessor implements TypedRecordProcessor<Deploym
     }
 
     @Override
-    public long writeRecord(TypedRecord<DeploymentEvent> event, TypedStreamWriter writer)
+    public long writeRecord(TypedRecord<DeploymentRecord> event, TypedStreamWriter writer)
     {
         if (deploymentRejected)
         {
@@ -117,12 +117,12 @@ public class DeploymentTimedOutProcessor implements TypedRecordProcessor<Deploym
 
             workflowKeys.forEachOrderedLong(workflowKey ->
             {
-                final WorkflowEvent workflowEvent = reader.readValue(workflowKey, WorkflowEvent.class).getValue();
+                final WorkflowRecord workflowEvent = reader.readValue(workflowKey, WorkflowRecord.class).getValue();
                 batch.addFollowUpEvent(workflowKey, Intent.DELETE, workflowEvent);
             });
 
             // the processor of this event sends the response
-            final TypedRecord<DeploymentEvent> deployCommand = getDeployCommand(event.getKey());
+            final TypedRecord<DeploymentRecord> deployCommand = getDeployCommand(event.getKey());
 
             batch.addRejection(deployCommand);
 
@@ -134,22 +134,22 @@ public class DeploymentTimedOutProcessor implements TypedRecordProcessor<Deploym
         }
     }
 
-    private TypedRecord<DeploymentEvent> getDeployCommand(long deploymentKey)
+    private TypedRecord<DeploymentRecord> getDeployCommand(long deploymentKey)
     {
         final long deploymentCommandPosition = deploymentKey;
-        return reader.readValue(deploymentCommandPosition, DeploymentEvent.class);
+        return reader.readValue(deploymentCommandPosition, DeploymentRecord.class);
 
     }
 
     @Override
-    public boolean executeSideEffects(TypedRecord<DeploymentEvent> record, TypedResponseWriter responseWriter)
+    public boolean executeSideEffects(TypedRecord<DeploymentRecord> record, TypedResponseWriter responseWriter)
     {
-        final TypedRecord<DeploymentEvent> deployCommand = getDeployCommand(record.getKey());
+        final TypedRecord<DeploymentRecord> deployCommand = getDeployCommand(record.getKey());
         return responseWriter.writeRejection(deployCommand);
     }
 
     @Override
-    public void updateState(TypedRecord<DeploymentEvent> event)
+    public void updateState(TypedRecord<DeploymentRecord> event)
     {
         if (deploymentRejected)
         {

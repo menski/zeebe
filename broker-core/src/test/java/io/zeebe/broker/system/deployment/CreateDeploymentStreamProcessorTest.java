@@ -28,7 +28,7 @@ import java.time.Duration;
 import org.junit.Rule;
 import org.junit.Test;
 
-import io.zeebe.broker.clustering.orchestration.topic.TopicEvent;
+import io.zeebe.broker.clustering.orchestration.topic.TopicRecord;
 import io.zeebe.broker.logstreams.processor.TypedStreamEnvironment;
 import io.zeebe.broker.logstreams.processor.TypedStreamProcessor;
 import io.zeebe.broker.system.deployment.data.PendingDeployments;
@@ -38,7 +38,7 @@ import io.zeebe.broker.system.deployment.handler.RemoteWorkflowsManager;
 import io.zeebe.broker.system.deployment.service.DeploymentManager;
 import io.zeebe.broker.topic.StreamProcessorControl;
 import io.zeebe.broker.util.StreamProcessorRule;
-import io.zeebe.broker.workflow.data.DeploymentEvent;
+import io.zeebe.broker.workflow.data.DeploymentRecord;
 import io.zeebe.broker.workflow.data.ResourceType;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
@@ -111,9 +111,9 @@ public class CreateDeploymentStreamProcessorTest
             > 0);
     }
 
-    protected DeploymentEvent deployment(WorkflowDefinition workflow)
+    protected DeploymentRecord deployment(WorkflowDefinition workflow)
     {
-        final DeploymentEvent event = new DeploymentEvent();
+        final DeploymentRecord event = new DeploymentRecord();
 
         event.setTopicName(STREAM_NAME);
         event.resources().add()
@@ -124,9 +124,9 @@ public class CreateDeploymentStreamProcessorTest
         return event;
     }
 
-    protected TopicEvent topic(String name, int partitions)
+    protected TopicRecord topic(String name, int partitions)
     {
-        final TopicEvent event = new TopicEvent();
+        final TopicRecord event = new TopicRecord();
         event.setName(BufferUtil.wrapString(name));
         event.setPartitions(partitions);
         for (int i = 0; i < partitions; i++)

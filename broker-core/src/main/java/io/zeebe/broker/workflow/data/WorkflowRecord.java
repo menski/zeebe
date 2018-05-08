@@ -21,7 +21,7 @@ import io.zeebe.msgpack.UnpackedObject;
 import io.zeebe.msgpack.property.*;
 import org.agrona.DirectBuffer;
 
-public class WorkflowEvent extends UnpackedObject
+public class WorkflowRecord extends UnpackedObject
 {
     private final StringProperty bpmnProcessIdProp = new StringProperty("bpmnProcessId");
     private final IntegerProperty versionProp = new IntegerProperty("version");
@@ -29,7 +29,7 @@ public class WorkflowEvent extends UnpackedObject
 
     private final LongProperty deploymentKeyProp = new LongProperty("deploymentKey");
 
-    public WorkflowEvent()
+    public WorkflowRecord()
     {
         this
             .declareProperty(bpmnProcessIdProp)
@@ -43,12 +43,12 @@ public class WorkflowEvent extends UnpackedObject
         return bpmnProcessIdProp.getValue();
     }
 
-    public WorkflowEvent setBpmnProcessId(DirectBuffer bpmnProcessId)
+    public WorkflowRecord setBpmnProcessId(DirectBuffer bpmnProcessId)
     {
         return setBpmnProcessId(bpmnProcessId, 0, bpmnProcessId.capacity());
     }
 
-    public WorkflowEvent setBpmnProcessId(DirectBuffer bpmnProcessId, int offset, int length)
+    public WorkflowRecord setBpmnProcessId(DirectBuffer bpmnProcessId, int offset, int length)
     {
         this.bpmnProcessIdProp.setValue(bpmnProcessId, offset, length);
         return this;
@@ -59,7 +59,7 @@ public class WorkflowEvent extends UnpackedObject
         return versionProp.getValue();
     }
 
-    public WorkflowEvent setVersion(int version)
+    public WorkflowRecord setVersion(int version)
     {
         this.versionProp.setValue(version);
         return this;
@@ -70,12 +70,12 @@ public class WorkflowEvent extends UnpackedObject
         return bpmnXmlProp.getValue();
     }
 
-    public WorkflowEvent setBpmnXml(DirectBuffer bpmnXml)
+    public WorkflowRecord setBpmnXml(DirectBuffer bpmnXml)
     {
         return setBpmnXml(bpmnXml, 0, bpmnXml.capacity());
     }
 
-    public WorkflowEvent setBpmnXml(DirectBuffer bpmnXml, int offset, int length)
+    public WorkflowRecord setBpmnXml(DirectBuffer bpmnXml, int offset, int length)
     {
         this.bpmnXmlProp.setValue(bpmnXml, offset, length);
         return this;
@@ -86,7 +86,7 @@ public class WorkflowEvent extends UnpackedObject
         return deploymentKeyProp.getValue();
     }
 
-    public WorkflowEvent setDeploymentKey(long deploymentKey)
+    public WorkflowRecord setDeploymentKey(long deploymentKey)
     {
         this.deploymentKeyProp.setValue(deploymentKey);
         return this;

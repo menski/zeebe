@@ -27,9 +27,9 @@ import io.zeebe.broker.logstreams.processor.TypedRecord;
 import io.zeebe.broker.logstreams.processor.TypedRecordProcessor;
 import io.zeebe.broker.system.deployment.data.PendingDeployments;
 import io.zeebe.broker.system.deployment.handler.DeploymentTimer;
-import io.zeebe.broker.workflow.data.DeploymentEvent;
+import io.zeebe.broker.workflow.data.DeploymentRecord;
 
-public class DeploymentValidatedProcessor implements TypedRecordProcessor<DeploymentEvent>
+public class DeploymentValidatedProcessor implements TypedRecordProcessor<DeploymentRecord>
 {
     private static final Logger LOG = Loggers.SYSTEM_LOGGER;
 
@@ -43,7 +43,7 @@ public class DeploymentValidatedProcessor implements TypedRecordProcessor<Deploy
     }
 
     @Override
-    public void processRecord(TypedRecord<DeploymentEvent> event)
+    public void processRecord(TypedRecord<DeploymentRecord> event)
     {
         // just add the event position to the index
 
@@ -51,7 +51,7 @@ public class DeploymentValidatedProcessor implements TypedRecordProcessor<Deploy
     }
 
     @Override
-    public void updateState(TypedRecord<DeploymentEvent> event)
+    public void updateState(TypedRecord<DeploymentRecord> event)
     {
         final long deploymentKey = event.getKey();
         final DirectBuffer topicName = event.getValue().getTopicName();

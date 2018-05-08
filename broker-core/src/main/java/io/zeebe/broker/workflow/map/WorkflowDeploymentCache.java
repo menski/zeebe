@@ -32,7 +32,7 @@ import io.zeebe.broker.logstreams.processor.StreamProcessorLifecycleAware;
 import io.zeebe.broker.logstreams.processor.TypedRecord;
 import io.zeebe.broker.logstreams.processor.TypedStreamProcessor;
 import io.zeebe.broker.logstreams.processor.TypedStreamReader;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
+import io.zeebe.broker.workflow.data.WorkflowRecord;
 import io.zeebe.map.Bytes2LongZbMap;
 import io.zeebe.map.Long2BytesZbMap;
 import io.zeebe.model.bpmn.BpmnModelApi;
@@ -117,7 +117,7 @@ public class WorkflowDeploymentCache implements AutoCloseable, StreamProcessorLi
         idVersionKeyBufferLength = bpmnProcessId.capacity() + SIZE_OF_INT;
     }
 
-    public void addDeployedWorkflow(long eventPosition, long workflowKey, WorkflowEvent event)
+    public void addDeployedWorkflow(long eventPosition, long workflowKey, WorkflowRecord event)
     {
         positionWorkflowValueBuffer.putLong(POSITION_OFFSET, eventPosition, BYTE_ORDER);
         positionWorkflowValueBuffer.putInt(WORKFLOW_INDEX_OFFSET, getWorkflowIndex(event), BYTE_ORDER);
@@ -131,7 +131,7 @@ public class WorkflowDeploymentCache implements AutoCloseable, StreamProcessorLi
         idVersionToKeyMap.put(idVersionKeyBuffer, 0, idVersionKeyBufferLength, workflowKey);
     }
 
-    private int getWorkflowIndex(WorkflowEvent event)
+    private int getWorkflowIndex(WorkflowRecord event)
     {
         final DirectBuffer bpmnProcessId = event.getBpmnProcessId();
         final DirectBuffer bpmnXml = event.getBpmnXml();
@@ -201,8 +201,8 @@ public class WorkflowDeploymentCache implements AutoCloseable, StreamProcessorLi
             final long eventPosition = positionWorkflowBuffer.getLong(POSITION_OFFSET, BYTE_ORDER);
             final int workflowIndex = positionWorkflowBuffer.getInt(WORKFLOW_INDEX_OFFSET, BYTE_ORDER);
 
-            final TypedRecord<WorkflowEvent> record = logStreamReader.readValue(eventPosition, WorkflowEvent.class);
-            final WorkflowEvent workflowEvent = record.getValue();
+            final TypedRecord<WorkflowRecord> record = logStreamReader.readValue(eventPosition, WorkflowRecord.class);
+            final WorkflowRecord workflowEvent = record.getValue();
 
             final WorkflowDefinition workflowDefinition = bpmn.readFromXmlBuffer(workflowEvent.getBpmnXml());
             final Workflow workflow = getWorkflowAt(workflowDefinition, workflowIndex);

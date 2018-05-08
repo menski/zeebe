@@ -26,12 +26,12 @@ import io.zeebe.broker.system.deployment.data.PendingDeployments.PendingDeployme
 import io.zeebe.broker.system.deployment.data.TopicPartitions.TopicPartition;
 import io.zeebe.broker.system.deployment.data.TopicPartitions.TopicPartitionIterator;
 import io.zeebe.broker.system.deployment.handler.RemoteWorkflowsManager;
-import io.zeebe.broker.workflow.data.WorkflowEvent;
+import io.zeebe.broker.workflow.data.WorkflowRecord;
 import io.zeebe.util.buffer.BufferUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 
-public class WorkflowCreateProcessor implements TypedRecordProcessor<WorkflowEvent>
+public class WorkflowCreateProcessor implements TypedRecordProcessor<WorkflowRecord>
 {
     private final TopicPartitions topicPartitions;
     private final PendingDeployments pendingDeployments;
@@ -54,11 +54,11 @@ public class WorkflowCreateProcessor implements TypedRecordProcessor<WorkflowEve
     }
 
     @Override
-    public void processRecord(TypedRecord<WorkflowEvent> command)
+    public void processRecord(TypedRecord<WorkflowRecord> command)
     {
         partitionIds.clear();
 
-        final WorkflowEvent workflowEvent = command.getValue();
+        final WorkflowRecord workflowEvent = command.getValue();
 
         final PendingDeployment pendingDeployment = pendingDeployments.get(workflowEvent.getDeploymentKey());
         ensureNotNull("pending deployment", pendingDeployment);
@@ -80,7 +80,7 @@ public class WorkflowCreateProcessor implements TypedRecordProcessor<WorkflowEve
     }
 
     @Override
-    public boolean executeSideEffects(TypedRecord<WorkflowEvent> command, TypedResponseWriter responseWriter)
+    public boolean executeSideEffects(TypedRecord<WorkflowRecord> command, TypedResponseWriter responseWriter)
     {
         return workflowRequestSender.distributeWorkflow(
                    partitionIds,
@@ -89,9 +89,9 @@ public class WorkflowCreateProcessor implements TypedRecordProcessor<WorkflowEve
     }
 
     @Override
-    public void updateState(TypedRecord<WorkflowEvent> command)
+    public void updateState(TypedRecord<WorkflowRecord> command)
     {
-        final WorkflowEvent workflowEvent = command.getValue();
+        final WorkflowRecord workflowEvent = command.getValue();
 
         for (int partitionId: partitionIds)
         {

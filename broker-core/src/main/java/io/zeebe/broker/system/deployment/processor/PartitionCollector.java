@@ -20,7 +20,7 @@ package io.zeebe.broker.system.deployment.processor;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 
-import io.zeebe.broker.clustering.orchestration.topic.TopicEvent;
+import io.zeebe.broker.clustering.orchestration.topic.TopicRecord;
 import io.zeebe.broker.logstreams.processor.TypedEventStreamProcessorBuilder;
 import io.zeebe.broker.logstreams.processor.TypedRecord;
 import io.zeebe.broker.logstreams.processor.TypedRecordProcessor;
@@ -59,21 +59,21 @@ public class PartitionCollector
         return partitions;
     }
 
-    protected class TopicCreatedProcessor implements TypedRecordProcessor<TopicEvent>
+    protected class TopicCreatedProcessor implements TypedRecordProcessor<TopicRecord>
     {
         private final IntArrayList partitionIds = new IntArrayList();
 
         @Override
-        public void processRecord(TypedRecord<TopicEvent> event)
+        public void processRecord(TypedRecord<TopicRecord> event)
         {
-            final TopicEvent topicEvent = event.getValue();
+            final TopicRecord topicEvent = event.getValue();
 
             partitionIds.clear();
             topicEvent.getPartitionIds().forEach(id -> partitionIds.addInt(id.getValue()));
         }
 
         @Override
-        public void updateState(TypedRecord<TopicEvent> event)
+        public void updateState(TypedRecord<TopicRecord> event)
         {
             final DirectBuffer topicName = event.getValue().getName();
 
