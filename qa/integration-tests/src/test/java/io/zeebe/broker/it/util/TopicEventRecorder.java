@@ -26,6 +26,7 @@ import io.zeebe.client.api.clients.SubscriptionClient;
 import io.zeebe.client.api.events.*;
 import io.zeebe.client.api.events.IncidentEvent.IncidentState;
 import io.zeebe.client.api.events.JobEvent.JobState;
+import io.zeebe.client.api.events.WorkflowInstanceEvent.WorkflowInstanceState;
 import io.zeebe.client.api.subscription.TopicSubscription;
 import org.junit.rules.ExternalResource;
 
@@ -111,6 +112,11 @@ public class TopicEventRecorder extends ExternalResource
         return wfInstanceEvents.stream().anyMatch(matcher);
     }
 
+    public boolean hasWorkflowInstanceEvent(final WorkflowInstanceState state)
+    {
+        return wfInstanceEvents.stream().anyMatch(wfInstanceEvent(state));
+    }
+
     public List<WorkflowInstanceEvent> getWorkflowInstanceEvents(final Predicate<WorkflowInstanceEvent> matcher)
     {
         return wfInstanceEvents.stream().filter(matcher).collect(Collectors.toList());
@@ -151,9 +157,9 @@ public class TopicEventRecorder extends ExternalResource
         return incidentEvents.stream().filter(matcher).findFirst().orElseThrow(() -> new AssertionError("no event found"));
     }
 
-    public static Predicate<WorkflowInstanceEvent> wfInstanceEvent(final String type)
+    public static Predicate<WorkflowInstanceEvent> wfInstanceEvent(final WorkflowInstanceState state)
     {
-        return e -> e.getState().equals(type);
+        return e -> e.getState().equals(state);
     }
 
     public static Predicate<JobEvent> jobEvent(final JobState state)

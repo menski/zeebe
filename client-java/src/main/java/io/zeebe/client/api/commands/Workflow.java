@@ -12,4 +12,9 @@ public interface Workflow
      */
     int getVersion();
 
+    /**
+     * @return the key of the deployed workflow
+     */
+    long getWorkflowKey();
+
 }
