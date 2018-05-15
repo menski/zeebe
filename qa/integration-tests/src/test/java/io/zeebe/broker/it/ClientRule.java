@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.api.clients.WorkflowClient;
+import io.zeebe.client.api.clients.*;
 import io.zeebe.client.api.commands.*;
 import io.zeebe.client.impl.ZeebeClientBuilderImpl;
 import io.zeebe.client.impl.ZeebeClientImpl;
@@ -156,5 +156,15 @@ public class ClientRule extends ExternalResource
     public WorkflowClient getWorkflowClient()
     {
         return getClient().topicClient().workflowClient();
+    }
+
+    public JobClient getJobClient()
+    {
+        return getClient().topicClient().jobClient();
+    }
+
+    public SubscriptionClient getSubscriptionClient()
+    {
+        return getClient().topicClient().subscriptionClient();
     }
 }

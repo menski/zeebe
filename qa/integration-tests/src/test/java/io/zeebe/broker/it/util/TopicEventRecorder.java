@@ -21,19 +21,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import org.junit.rules.ExternalResource;
-
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.client.api.clients.SubscriptionClient;
 import io.zeebe.client.api.commands.JobCommand;
 import io.zeebe.client.api.commands.JobCommand.JobCommandName;
-import io.zeebe.client.api.events.IncidentEvent;
+import io.zeebe.client.api.events.*;
 import io.zeebe.client.api.events.IncidentEvent.IncidentState;
-import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.api.events.JobEvent.JobState;
-import io.zeebe.client.api.events.WorkflowInstanceEvent;
 import io.zeebe.client.api.events.WorkflowInstanceEvent.WorkflowInstanceState;
 import io.zeebe.client.api.subscription.TopicSubscription;
+import org.junit.rules.ExternalResource;
 
 public class TopicEventRecorder extends ExternalResource
 {
@@ -134,16 +131,25 @@ public class TopicEventRecorder extends ExternalResource
         return wfInstanceEvents.stream().filter(matcher).findFirst().orElseThrow(() -> new AssertionError("no event found"));
     }
 
+    public WorkflowInstanceEvent getSingleWorkflowInstanceEvent(WorkflowInstanceState state)
+    {
+        return wfInstanceEvents.stream().filter(wfInstanceEvent(state)).findFirst().orElseThrow(() -> new AssertionError("no event found"));
+    }
+
     public boolean hasJobEvent(final Predicate<JobEvent> matcher)
     {
         return jobEvents.stream().anyMatch(matcher);
+    }
+
+    public boolean hasJobEvent(JobState state)
+    {
+        return jobEvents.stream().anyMatch(jobEvent(state));
     }
 
     public boolean hasJobCommand(final Predicate<JobCommand> matcher)
     {
         return jobCommands.stream().anyMatch(matcher);
     }
-
 
     public List<JobEvent> getJobEvents(final Predicate<JobEvent> matcher)
     {
