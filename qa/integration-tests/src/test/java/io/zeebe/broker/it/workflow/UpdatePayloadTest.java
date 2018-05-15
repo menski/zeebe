@@ -86,7 +86,7 @@ public class UpdatePayloadTest
         waitUntil(() -> eventRecorder.hasWorkflowInstanceEvent(wfInstanceEvent("PAYLOAD_UPDATED")));
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("task-1")
+            .jobType("task-1")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler((c, t) -> c.complete(t).payload("{\"result\": \"ok\"}").execute())
@@ -107,7 +107,7 @@ public class UpdatePayloadTest
             .execute();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("task-1")
+            .jobType("task-1")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler((c, t) -> c.complete(t).payload("{\"result\": \"done\"}").execute())

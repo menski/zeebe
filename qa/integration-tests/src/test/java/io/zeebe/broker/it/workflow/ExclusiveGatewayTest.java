@@ -138,7 +138,7 @@ public class ExclusiveGatewayTest
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
             .lockTime(Duration.ofSeconds(5))
             .lockOwner("test")
-            .taskType("inc")
+            .jobType("inc")
             .handler((c, task) ->
             {
                 final String payload = task.getPayload();

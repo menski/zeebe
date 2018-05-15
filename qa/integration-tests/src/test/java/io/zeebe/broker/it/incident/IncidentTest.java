@@ -16,7 +16,7 @@
 package io.zeebe.broker.it.incident;
 
 import static io.zeebe.broker.it.util.TopicEventRecorder.incidentEvent;
-import static io.zeebe.broker.it.util.TopicEventRecorder.taskEvent;
+import static io.zeebe.broker.it.util.TopicEventRecorder.jobEvent;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 
 import java.time.Duration;
@@ -77,7 +77,7 @@ public class IncidentTest
             .execute();
 
         // then
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("CREATED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("CREATED")));
         waitUntil(() -> eventRecorder.hasIncidentEvent(incidentEvent("RESOLVED")));
     }
 
@@ -120,7 +120,7 @@ public class IncidentTest
         taskHandler.failTask = true;
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("test")
+            .jobType("test")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler(taskHandler)

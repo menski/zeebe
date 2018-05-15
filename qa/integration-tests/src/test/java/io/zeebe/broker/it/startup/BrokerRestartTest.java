@@ -16,7 +16,7 @@
 package io.zeebe.broker.it.startup;
 
 import static io.zeebe.broker.it.util.TopicEventRecorder.incidentEvent;
-import static io.zeebe.broker.it.util.TopicEventRecorder.taskEvent;
+import static io.zeebe.broker.it.util.TopicEventRecorder.jobEvent;
 import static io.zeebe.broker.it.util.TopicEventRecorder.wfInstanceEvent;
 import static io.zeebe.test.util.TestUtil.doRepeatedly;
 import static io.zeebe.test.util.TestUtil.waitUntil;
@@ -33,7 +33,7 @@ import org.junit.rules.RuleChain;
 
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
-import io.zeebe.broker.it.util.RecordingTaskHandler;
+import io.zeebe.broker.it.util.RecordingJobHandler;
 import io.zeebe.broker.it.util.TopicEventRecorder;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.cmd.ClientCommandRejectedException;
@@ -120,20 +120,20 @@ public class BrokerRestartTest
             .bpmnProcessId("process")
             .execute();
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("CREATED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("CREATED")));
 
         // when
         restartBroker();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("test")
             .lockTime(Duration.ofSeconds(5))
             .handler((c, t) -> c.complete(t).withoutPayload().execute())
             .open();
 
         // then
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
         waitUntil(() -> eventRecorder.hasWorkflowInstanceEvent(wfInstanceEvent("WORKFLOW_INSTANCE_COMPLETED")));
     }
 
@@ -149,24 +149,24 @@ public class BrokerRestartTest
             .bpmnProcessId("process")
             .execute();
 
-        final RecordingTaskHandler recordingTaskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler recordingTaskHandler = new RecordingJobHandler();
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("test")
             .lockTime(Duration.ofSeconds(5))
             .handler(recordingTaskHandler)
             .open();
 
-        waitUntil(() -> !recordingTaskHandler.getHandledTasks().isEmpty());
+        waitUntil(() -> !recordingTaskHandler.getHandledJobs().isEmpty());
 
         // when
         restartBroker();
 
-        final TaskEvent task = recordingTaskHandler.getHandledTasks().get(0);
+        final TaskEvent task = recordingTaskHandler.getHandledJobs().get(0);
         clientRule.tasks().complete(task).execute();
 
         // then
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
         waitUntil(() -> eventRecorder.hasWorkflowInstanceEvent(wfInstanceEvent("WORKFLOW_INSTANCE_COMPLETED")));
     }
 
@@ -183,26 +183,26 @@ public class BrokerRestartTest
             .execute();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("test")
             .lockTime(Duration.ofSeconds(5))
             .handler((c, t) -> c.complete(t).withoutPayload().execute())
             .open();
 
-        waitUntil(() -> eventRecorder.getTaskEvents(taskEvent("CREATED")).size() > 1);
+        waitUntil(() -> eventRecorder.getJobEvents(jobEvent("CREATED")).size() > 1);
 
         // when
         restartBroker();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("bar")
+            .jobType("bar")
             .lockOwner("test")
             .lockTime(Duration.ofSeconds(5))
             .handler((c, t) -> c.complete(t).withoutPayload().execute())
             .open();
 
         // then
-        waitUntil(() -> eventRecorder.getTaskEvents(taskEvent("COMPLETED")).size() > 1);
+        waitUntil(() -> eventRecorder.getJobEvents(jobEvent("COMPLETED")).size() > 1);
         waitUntil(() -> eventRecorder.hasWorkflowInstanceEvent(wfInstanceEvent("WORKFLOW_INSTANCE_COMPLETED")));
     }
 
@@ -247,20 +247,20 @@ public class BrokerRestartTest
         // given
         clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("CREATED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("CREATED")));
 
         // when
         restartBroker();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("test")
             .lockTime(Duration.ofSeconds(5))
             .handler((c, t) -> c.complete(t).withoutPayload().execute())
             .open();
 
         // then
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
     }
 
     @Test
@@ -269,24 +269,24 @@ public class BrokerRestartTest
         // given
         clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
 
-        final RecordingTaskHandler recordingTaskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler recordingTaskHandler = new RecordingJobHandler();
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("test")
             .lockTime(Duration.ofSeconds(5))
             .handler(recordingTaskHandler)
             .open();
 
-        waitUntil(() -> !recordingTaskHandler.getHandledTasks().isEmpty());
+        waitUntil(() -> !recordingTaskHandler.getHandledJobs().isEmpty());
 
         // when
         restartBroker();
 
-        final TaskEvent task = recordingTaskHandler.getHandledTasks().get(0);
+        final TaskEvent task = recordingTaskHandler.getHandledJobs().get(0);
         clientRule.tasks().complete(task).execute();
 
         // then
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
     }
 
     @Test
@@ -295,15 +295,15 @@ public class BrokerRestartTest
         // given
         clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
 
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler taskHandler = new RecordingJobHandler();
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofSeconds(5))
             .lockOwner("test")
             .handler(taskHandler)
             .open();
 
-        waitUntil(() -> !taskHandler.getHandledTasks().isEmpty());
+        waitUntil(() -> !taskHandler.getHandledJobs().isEmpty());
 
         // when
         restartBroker();
@@ -311,7 +311,7 @@ public class BrokerRestartTest
         taskHandler.clear();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(10L))
             .lockOwner("test")
             .handler(taskHandler)
@@ -319,9 +319,9 @@ public class BrokerRestartTest
 
         // then
         TestUtil.doRepeatedly(() -> null)
-            .whileConditionHolds((o) -> taskHandler.getHandledTasks().isEmpty());
+            .whileConditionHolds((o) -> taskHandler.getHandledJobs().isEmpty());
 
-        assertThat(taskHandler.getHandledTasks()).isEmpty();
+        assertThat(taskHandler.getHandledJobs()).isEmpty();
     }
 
     @Test
@@ -330,15 +330,15 @@ public class BrokerRestartTest
         // given
         clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
 
-        final RecordingTaskHandler recordingTaskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler recordingTaskHandler = new RecordingJobHandler();
         final TaskSubscription subscription = clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofSeconds(5))
             .lockOwner("test")
             .handler(recordingTaskHandler)
             .open();
 
-        waitUntil(() -> !recordingTaskHandler.getHandledTasks().isEmpty());
+        waitUntil(() -> !recordingTaskHandler.getHandledJobs().isEmpty());
         subscription.close();
 
         // when
@@ -348,23 +348,23 @@ public class BrokerRestartTest
         {
             brokerRule.getClock().addTime(Duration.ofSeconds(60)); // retriggers lock expiration check in broker
             return null;
-        }).until(t -> eventRecorder.hasTaskEvent(taskEvent("LOCK_EXPIRED")));
+        }).until(t -> eventRecorder.hasJobEvent(jobEvent("LOCK_EXPIRED")));
         recordingTaskHandler.clear();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(10L))
             .lockOwner("test")
             .handler(recordingTaskHandler)
             .open();
 
         // then
-        waitUntil(() -> !recordingTaskHandler.getHandledTasks().isEmpty());
+        waitUntil(() -> !recordingTaskHandler.getHandledJobs().isEmpty());
 
-        final TaskEvent task = recordingTaskHandler.getHandledTasks().get(0);
+        final TaskEvent task = recordingTaskHandler.getHandledJobs().get(0);
         clientRule.tasks().complete(task).execute();
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
     }
 
     @Test
@@ -393,7 +393,7 @@ public class BrokerRestartTest
 
         // then
         waitUntil(() -> eventRecorder.hasIncidentEvent(incidentEvent("RESOLVED")));
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("CREATED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("CREATED")));
     }
 
     @Test
@@ -428,7 +428,7 @@ public class BrokerRestartTest
 
         // then
         waitUntil(() -> eventRecorder.hasIncidentEvent(incidentEvent("RESOLVED")));
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("CREATED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("CREATED")));
     }
 
     @Test

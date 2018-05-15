@@ -172,7 +172,7 @@ public class CreateTopicClusteredTest
                                                       .execute();
                   taskCompleted.complete(completedTask);
               })
-              .taskType("bar")
+              .jobType("bar")
               .lockOwner("owner")
               .lockTime(5000)
               .open();

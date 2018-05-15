@@ -15,8 +15,8 @@
  */
 package io.zeebe.broker.it.task;
 
-import static io.zeebe.broker.it.util.TopicEventRecorder.taskEvent;
-import static io.zeebe.broker.it.util.TopicEventRecorder.taskRetries;
+import static io.zeebe.broker.it.util.TopicEventRecorder.jobEvent;
+import static io.zeebe.broker.it.util.TopicEventRecorder.jobRetries;
 import static io.zeebe.test.util.TestUtil.doRepeatedly;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +27,7 @@ import java.util.List;
 
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
-import io.zeebe.broker.it.util.RecordingTaskHandler;
+import io.zeebe.broker.it.util.RecordingJobHandler;
 import io.zeebe.broker.it.util.TopicEventRecorder;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.event.TaskEvent;
@@ -68,19 +68,19 @@ public class TaskSubscriptionTest
         final TaskEvent task = clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
 
         // when
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler taskHandler = new RecordingJobHandler();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
         // then
-        waitUntil(() -> !taskHandler.getHandledTasks().isEmpty());
+        waitUntil(() -> !taskHandler.getHandledJobs().isEmpty());
 
-        final List<TaskEvent> tasks = taskHandler.getHandledTasks();
+        final List<TaskEvent> tasks = taskHandler.getHandledJobs();
         assertThat(tasks).hasSize(1);
         assertThat(tasks.get(0).getMetadata().getKey()).isEqualTo(task.getMetadata().getKey());
     }
@@ -96,17 +96,17 @@ public class TaskSubscriptionTest
             .addCustomHeader("b", "2")
             .execute();
 
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler taskHandler = new RecordingJobHandler();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
-        waitUntil(() -> !taskHandler.getHandledTasks().isEmpty());
-        final TaskEvent lockedTask = taskHandler.getHandledTasks().get(0);
+        waitUntil(() -> !taskHandler.getHandledJobs().isEmpty());
+        final TaskEvent lockedTask = taskHandler.getHandledJobs().get(0);
 
         // when
         final TaskEvent result = clientRule.tasks().complete(lockedTask)
@@ -115,16 +115,16 @@ public class TaskSubscriptionTest
 
         // then
         assertThat(result.getMetadata().getKey()).isEqualTo(task.getMetadata().getKey());
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
 
-        TaskEvent taskEvent = eventRecorder.getTaskEvents(taskEvent("CREATE")).get(0);
+        TaskEvent taskEvent = eventRecorder.getJobEvents(jobEvent("CREATE")).get(0);
         assertThat(taskEvent.getLockExpirationTime()).isNull();
         assertThat(taskEvent.getLockOwner()).isNull();
 
-        taskEvent = eventRecorder.getTaskEvents(taskEvent("CREATED")).get(0);
+        taskEvent = eventRecorder.getJobEvents(jobEvent("CREATED")).get(0);
         assertThat(taskEvent.getLockExpirationTime()).isNull();
 
-        taskEvent = eventRecorder.getTaskEvents(taskEvent("LOCKED")).get(0);
+        taskEvent = eventRecorder.getJobEvents(jobEvent("LOCKED")).get(0);
         assertThat(taskEvent.getLockExpirationTime()).isNotNull();
         assertThat(taskEvent.getLockOwner()).isEqualTo("test");
     }
@@ -141,28 +141,28 @@ public class TaskSubscriptionTest
             .execute();
 
         // when
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler((c, t) -> c.complete(t).payload("{\"a\":3}").execute());
+        final RecordingJobHandler taskHandler = new RecordingJobHandler((c, t) -> c.complete(t).payload("{\"a\":3}").execute());
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
         // then
-        waitUntil(() -> !taskHandler.getHandledTasks().isEmpty());
+        waitUntil(() -> !taskHandler.getHandledJobs().isEmpty());
 
-        assertThat(taskHandler.getHandledTasks()).hasSize(1);
+        assertThat(taskHandler.getHandledJobs()).hasSize(1);
 
-        final TaskEvent subscribedTask = taskHandler.getHandledTasks().get(0);
+        final TaskEvent subscribedTask = taskHandler.getHandledJobs().get(0);
         assertThat(subscribedTask.getMetadata().getKey()).isEqualTo(task.getMetadata().getKey());
         assertThat(subscribedTask.getType()).isEqualTo("foo");
         assertThat(subscribedTask.getLockExpirationTime()).isAfter(Instant.now());
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
 
-        final TaskEvent taskEvent = eventRecorder.getTaskEvents(taskEvent("COMPLETED")).get(0);
+        final TaskEvent taskEvent = eventRecorder.getJobEvents(jobEvent("COMPLETED")).get(0);
         assertThat(taskEvent.getPayload()).isEqualTo("{\"a\":3}");
         assertThat(task.getCustomHeaders()).containsEntry("b", "2");
     }
@@ -173,11 +173,11 @@ public class TaskSubscriptionTest
         // given
         eventRecorder.startRecordingEvents();
 
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler taskHandler = new RecordingJobHandler();
 
         final TaskSubscription subscription = clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
                 .handler(taskHandler)
-                .taskType("foo")
+                .jobType("foo")
                 .lockTime(Duration.ofMinutes(5))
                 .lockOwner("test")
                 .open();
@@ -188,10 +188,10 @@ public class TaskSubscriptionTest
         // then
         clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("CREATED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("CREATED")));
 
-        assertThat(taskHandler.getHandledTasks()).isEmpty();
-        assertThat(eventRecorder.hasTaskEvent(taskEvent("LOCK"))).isFalse();
+        assertThat(taskHandler.getHandledJobs()).isEmpty();
+        assertThat(eventRecorder.hasJobEvent(jobEvent("LOCK"))).isFalse();
     }
 
     @Test
@@ -204,24 +204,24 @@ public class TaskSubscriptionTest
             clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
         }
 
-        final RecordingTaskHandler handler = new RecordingTaskHandler((c, t) ->
+        final RecordingJobHandler handler = new RecordingJobHandler((c, t) ->
         {
             c.complete(t).withoutPayload().execute();
         });
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(handler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .taskFetchSize(10)
             .open();
 
         // when
-        waitUntil(() -> handler.getHandledTasks().size() == numTasks);
+        waitUntil(() -> handler.getHandledJobs().size() == numTasks);
 
         // then
-        assertThat(handler.getHandledTasks()).hasSize(numTasks);
+        assertThat(handler.getHandledJobs()).hasSize(numTasks);
     }
 
     @Test
@@ -232,7 +232,7 @@ public class TaskSubscriptionTest
 
         final TaskEvent task = clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
 
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler(
+        final RecordingJobHandler taskHandler = new RecordingJobHandler(
             (c, t) ->
             {
                 throw new RuntimeException("expected failure");
@@ -243,18 +243,18 @@ public class TaskSubscriptionTest
         // when
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
         // then the subscription is not broken and other tasks are still handled
-        waitUntil(() -> taskHandler.getHandledTasks().size() == 2);
+        waitUntil(() -> taskHandler.getHandledJobs().size() == 2);
 
         final long taskKey = task.getMetadata().getKey();
-        assertThat(taskHandler.getHandledTasks()).extracting("metadata.key").containsExactly(taskKey, taskKey);
-        assertThat(eventRecorder.hasTaskEvent(taskEvent("FAILED"))).isTrue();
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        assertThat(taskHandler.getHandledJobs()).extracting("metadata.key").containsExactly(taskKey, taskKey);
+        assertThat(eventRecorder.hasJobEvent(jobEvent("FAILED"))).isTrue();
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
     }
 
     @Test
@@ -267,7 +267,7 @@ public class TaskSubscriptionTest
             .retries(1)
             .execute();
 
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler(
+        final RecordingJobHandler taskHandler = new RecordingJobHandler(
             (c, t) ->
             {
                 throw new RuntimeException("expected failure");
@@ -276,14 +276,14 @@ public class TaskSubscriptionTest
         // when
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("FAILED").and(taskRetries(0))));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("FAILED").and(jobRetries(0))));
 
-        assertThat(taskHandler.getHandledTasks()).hasSize(1);
+        assertThat(taskHandler.getHandledJobs()).hasSize(1);
     }
 
     @Test
@@ -296,7 +296,7 @@ public class TaskSubscriptionTest
             .retries(1)
             .execute();
 
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler(
+        final RecordingJobHandler taskHandler = new RecordingJobHandler(
             (c, t) ->
             {
                 throw new RuntimeException("expected failure");
@@ -305,13 +305,13 @@ public class TaskSubscriptionTest
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
-        waitUntil(() -> taskHandler.getHandledTasks().size() == 1);
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("FAILED").and(taskRetries(0))));
+        waitUntil(() -> taskHandler.getHandledJobs().size() == 1);
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("FAILED").and(jobRetries(0))));
 
         // when
         final TaskEvent updatedTask = clientRule.tasks().updateRetries(task)
@@ -321,8 +321,8 @@ public class TaskSubscriptionTest
         // then
         assertThat(updatedTask.getMetadata().getKey()).isEqualTo(task.getMetadata().getKey());
 
-        waitUntil(() -> taskHandler.getHandledTasks().size() == 2);
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> taskHandler.getHandledJobs().size() == 2);
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
     }
 
     @Test
@@ -333,47 +333,47 @@ public class TaskSubscriptionTest
 
         final TaskEvent task = clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
 
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler((c, t) ->
+        final RecordingJobHandler taskHandler = new RecordingJobHandler((c, t) ->
         {
             // don't complete the task - just wait for lock expiration
         });
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
-        waitUntil(() -> taskHandler.getHandledTasks().size() == 1);
+        waitUntil(() -> taskHandler.getHandledJobs().size() == 1);
 
         // then
         doRepeatedly(() -> brokerRule.getClock().addTime(Duration.ofMinutes(5)))
-            .until((v) -> taskHandler.getHandledTasks().size() == 2);
+            .until((v) -> taskHandler.getHandledJobs().size() == 2);
 
         final long taskKey = task.getMetadata().getKey();
-        assertThat(taskHandler.getHandledTasks())
+        assertThat(taskHandler.getHandledJobs())
             .hasSize(2)
             .extracting("metadata.key").containsExactly(taskKey, taskKey);
 
-        assertThat(eventRecorder.hasTaskEvent(taskEvent("LOCK_EXPIRED"))).isTrue();
+        assertThat(eventRecorder.hasJobEvent(jobEvent("LOCK_EXPIRED"))).isTrue();
     }
 
     @Test
     public void shouldGiveTaskToSingleSubscription()
     {
         // given
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler((c, t) -> c.complete(t).withoutPayload().execute());
+        final RecordingJobHandler taskHandler = new RecordingJobHandler((c, t) -> c.complete(t).withoutPayload().execute());
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofHours(1))
             .lockOwner("test")
             .handler(taskHandler)
             .open();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofHours(2))
             .lockOwner("test")
             .handler(taskHandler)
@@ -382,10 +382,10 @@ public class TaskSubscriptionTest
         // when
         clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
 
-        waitUntil(() -> taskHandler.getHandledTasks().size() == 1);
+        waitUntil(() -> taskHandler.getHandledJobs().size() == 1);
 
         // then
-        assertThat(taskHandler.getHandledTasks()).hasSize(1);
+        assertThat(taskHandler.getHandledJobs()).hasSize(1);
     }
 
     @Test
@@ -395,7 +395,7 @@ public class TaskSubscriptionTest
         eventRecorder.startRecordingEvents();
 
         final PollableTaskSubscription subscription = clientRule.tasks().newPollableTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
@@ -407,21 +407,21 @@ public class TaskSubscriptionTest
                 .execute();
 
         // when
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler((c, t) -> c.complete(t).withoutPayload().execute());
+        final RecordingJobHandler taskHandler = new RecordingJobHandler((c, t) -> c.complete(t).withoutPayload().execute());
 
         doRepeatedly(() -> subscription.poll(taskHandler))
             .until((workCount) -> workCount == 1);
 
-        assertThat(taskHandler.getHandledTasks()).hasSize(1);
+        assertThat(taskHandler.getHandledJobs()).hasSize(1);
 
-        final TaskEvent subscribedTasks = taskHandler.getHandledTasks().get(0);
+        final TaskEvent subscribedTasks = taskHandler.getHandledJobs().get(0);
         assertThat(subscribedTasks.getMetadata().getKey()).isEqualTo(task.getMetadata().getKey());
         assertThat(subscribedTasks.getType()).isEqualTo("foo");
         assertThat(subscribedTasks.getLockExpirationTime()).isAfter(Instant.now());
         assertThat(subscribedTasks.getPayload()).isEqualTo("{\"a\":1}");
         assertThat(subscribedTasks.getCustomHeaders()).containsEntry("b", "2");
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
     }
 
     @Test
@@ -431,23 +431,23 @@ public class TaskSubscriptionTest
         clientRule.tasks().create(clientRule.getDefaultTopic(), "foo").execute();
         clientRule.tasks().create(clientRule.getDefaultTopic(), "bar").execute();
 
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler taskHandler = new RecordingJobHandler();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("bar")
+            .jobType("bar")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
-        waitUntil(() -> taskHandler.getHandledTasks().size() == 2);
+        waitUntil(() -> taskHandler.getHandledJobs().size() == 2);
     }
 
     @Test
@@ -463,18 +463,18 @@ public class TaskSubscriptionTest
                 .payload("{}")
                 .execute();
         }
-        final RecordingTaskHandler taskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler taskHandler = new RecordingJobHandler();
 
         // when
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .handler(taskHandler)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
             .open();
 
         // then
-        TestUtil.waitUntil(() -> taskHandler.getHandledTasks().size() > subscriptionCapacity);
+        TestUtil.waitUntil(() -> taskHandler.getHandledJobs().size() > subscriptionCapacity);
     }
 
     @Test
@@ -501,7 +501,7 @@ public class TaskSubscriptionTest
 
         final String taskType = "foooo";
 
-        final RecordingTaskHandler handler = new RecordingTaskHandler();
+        final RecordingJobHandler handler = new RecordingJobHandler();
 
         createTaskOnPartition(client, topicName, partitionIds[0], taskType);
         createTaskOnPartition(client, topicName, partitionIds[1], taskType);
@@ -511,13 +511,13 @@ public class TaskSubscriptionTest
             .handler(handler)
             .lockOwner("foo")
             .lockTime(Duration.ofSeconds(30))
-            .taskType(taskType)
+            .jobType(taskType)
             .open();
 
         // then
-        waitUntil(() -> handler.getHandledTasks().size() == 2);
+        waitUntil(() -> handler.getHandledJobs().size() == 2);
 
-        final Integer[] receivedPartitionIds = handler.getHandledTasks().stream()
+        final Integer[] receivedPartitionIds = handler.getHandledJobs().stream()
             .map(t -> t.getMetadata().getPartitionId())
             .toArray(Integer[]::new);
 

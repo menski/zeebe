@@ -15,7 +15,7 @@
  */
 package io.zeebe.broker.it.workflow;
 
-import static io.zeebe.broker.it.util.TopicEventRecorder.taskEvent;
+import static io.zeebe.broker.it.util.TopicEventRecorder.jobEvent;
 import static io.zeebe.broker.it.util.TopicEventRecorder.wfInstanceEvent;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,7 +24,7 @@ import java.time.Duration;
 
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
-import io.zeebe.broker.it.util.RecordingTaskHandler;
+import io.zeebe.broker.it.util.RecordingJobHandler;
 import io.zeebe.broker.it.util.TopicEventRecorder;
 import io.zeebe.client.TasksClient;
 import io.zeebe.client.WorkflowsClient;
@@ -92,14 +92,14 @@ public class YamlWorkflowTest
 
         // when
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler((c, t) -> c.complete(t).withoutPayload().execute())
             .open();
 
         // then
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
         waitUntil(() -> eventRecorder.hasWorkflowInstanceEvent(wfInstanceEvent("WORKFLOW_INSTANCE_COMPLETED")));
     }
 
@@ -116,19 +116,19 @@ public class YamlWorkflowTest
                 .execute();
 
         // when
-        final RecordingTaskHandler recordingTaskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler recordingTaskHandler = new RecordingJobHandler();
 
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler(recordingTaskHandler)
             .open();
 
         // then
-        waitUntil(() -> recordingTaskHandler.getHandledTasks().size() >= 1);
+        waitUntil(() -> recordingTaskHandler.getHandledJobs().size() >= 1);
 
-        final TaskEvent taskLockedEvent = recordingTaskHandler.getHandledTasks().get(0);
+        final TaskEvent taskLockedEvent = recordingTaskHandler.getHandledJobs().get(0);
         assertThat(taskLockedEvent.getCustomHeaders())
             .containsEntry("foo", "f")
             .containsEntry("bar", "b");
@@ -148,22 +148,22 @@ public class YamlWorkflowTest
                 .execute();
 
         // when
-        final RecordingTaskHandler recordingTaskHandler = new RecordingTaskHandler((c, task) -> c
+        final RecordingJobHandler recordingTaskHandler = new RecordingJobHandler((c, task) -> c
             .complete(task)
             .payload("{\"result\":3}")
             .execute());
 
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler(recordingTaskHandler)
             .open();
 
         // then
-        waitUntil(() -> recordingTaskHandler.getHandledTasks().size() >= 1);
+        waitUntil(() -> recordingTaskHandler.getHandledJobs().size() >= 1);
 
-        final TaskEvent taskLockedEvent = recordingTaskHandler.getHandledTasks().get(0);
+        final TaskEvent taskLockedEvent = recordingTaskHandler.getHandledJobs().get(0);
         assertThat(taskLockedEvent.getPayload()).isEqualTo("{\"bar\":1}");
 
         waitUntil(() -> eventRecorder.hasWorkflowInstanceEvent(wfInstanceEvent("ACTIVITY_COMPLETED")));

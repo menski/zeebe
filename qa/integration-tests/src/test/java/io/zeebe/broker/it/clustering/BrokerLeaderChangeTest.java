@@ -99,7 +99,7 @@ public class BrokerLeaderChangeTest
             final long eventKey = task.getMetadata().getKey();
 
             taskSubscription = doRepeatedly(() -> taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-                .taskType(TASK_TYPE)
+                .jobType(TASK_TYPE)
                 .lockOwner("taskCompleter")
                 .lockTime(Duration.ofMinutes(1))
                 .handler((c, t) ->

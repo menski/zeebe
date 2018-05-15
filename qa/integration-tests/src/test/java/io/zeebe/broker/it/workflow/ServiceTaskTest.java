@@ -15,7 +15,7 @@
  */
 package io.zeebe.broker.it.workflow;
 
-import static io.zeebe.broker.it.util.TopicEventRecorder.taskEvent;
+import static io.zeebe.broker.it.util.TopicEventRecorder.jobEvent;
 import static io.zeebe.broker.it.util.TopicEventRecorder.wfInstanceEvent;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +27,7 @@ import java.util.Map;
 
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
-import io.zeebe.broker.it.util.RecordingTaskHandler;
+import io.zeebe.broker.it.util.RecordingJobHandler;
 import io.zeebe.broker.it.util.TopicEventRecorder;
 import io.zeebe.client.TasksClient;
 import io.zeebe.client.WorkflowsClient;
@@ -111,23 +111,23 @@ public class ServiceTaskTest
                 .execute();
 
         // when
-        final RecordingTaskHandler recordingTaskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler recordingTaskHandler = new RecordingJobHandler();
 
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler(recordingTaskHandler)
             .open();
 
         // then
-        waitUntil(() -> recordingTaskHandler.getHandledTasks().size() >= 1);
+        waitUntil(() -> recordingTaskHandler.getHandledJobs().size() >= 1);
 
-        assertThat(recordingTaskHandler.getHandledTasks()).hasSize(1);
+        assertThat(recordingTaskHandler.getHandledJobs()).hasSize(1);
 
         final WorkflowInstanceEvent activityInstance = eventRecorder.getSingleWorkflowInstanceEvent(e -> "ACTIVITY_ACTIVATED".equals(e.getState()));
 
-        final TaskEvent taskLockedEvent = recordingTaskHandler.getHandledTasks().get(0);
+        final TaskEvent taskLockedEvent = recordingTaskHandler.getHandledJobs().get(0);
         assertThat(taskLockedEvent.getHeaders()).containsOnly(
             entry("bpmnProcessId", "process"),
             entry("workflowDefinitionVersion", 1),
@@ -160,14 +160,14 @@ public class ServiceTaskTest
 
         // when
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler((c, t) -> c.complete(t).withoutPayload().execute())
             .open();
 
         // then
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETED")));
         waitUntil(() -> eventRecorder.hasWorkflowInstanceEvent(wfInstanceEvent("WORKFLOW_INSTANCE_COMPLETED")));
     }
 
@@ -192,19 +192,19 @@ public class ServiceTaskTest
                 .execute();
 
         // when
-        final RecordingTaskHandler recordingTaskHandler = new RecordingTaskHandler();
+        final RecordingJobHandler recordingTaskHandler = new RecordingJobHandler();
 
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler(recordingTaskHandler)
             .open();
 
         // then
-        waitUntil(() -> recordingTaskHandler.getHandledTasks().size() >= 1);
+        waitUntil(() -> recordingTaskHandler.getHandledJobs().size() >= 1);
 
-        final TaskEvent taskLockedEvent = recordingTaskHandler.getHandledTasks().get(0);
+        final TaskEvent taskLockedEvent = recordingTaskHandler.getHandledJobs().get(0);
         assertThat(taskLockedEvent.getPayload()).isEqualTo("{\"bar\":1}");
     }
 
@@ -229,7 +229,7 @@ public class ServiceTaskTest
 
         // when
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler((c, t) ->  c.complete(t).payload("{\"foo\":2}").execute())
@@ -264,7 +264,7 @@ public class ServiceTaskTest
 
         // when
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(5))
             .handler((c, t) ->
@@ -307,14 +307,14 @@ public class ServiceTaskTest
         }
 
         taskClient.newTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("foo")
+            .jobType("foo")
             .lockOwner("test")
             .lockTime(Duration.ofMinutes(5))
             .handler((c, t) -> c.complete(t).payload("{\"foo\":2}").execute())
             .open();
 
         // then
-        waitUntil(() -> eventRecorder.getTaskEvents(taskEvent("COMPLETED")).size() == instances);
+        waitUntil(() -> eventRecorder.getJobEvents(jobEvent("COMPLETED")).size() == instances);
         waitUntil(() -> eventRecorder.getWorkflowInstanceEvents(wfInstanceEvent("WORKFLOW_INSTANCE_COMPLETED")).size() == instances);
     }
 

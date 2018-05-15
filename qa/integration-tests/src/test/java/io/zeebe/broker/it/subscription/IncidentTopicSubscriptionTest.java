@@ -102,7 +102,7 @@ public class IncidentTopicSubscriptionTest
         clientRule.tasks().newTaskSubscription(clientRule.getDefaultTopic())
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("test")
-            .taskType("test")
+            .jobType("test")
             .handler((c, t) ->
             {
                 throw new RuntimeException("expected failure");

@@ -24,7 +24,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
-import io.zeebe.broker.it.util.RecordingTaskHandler;
+import io.zeebe.broker.it.util.RecordingJobHandler;
 import io.zeebe.client.event.TaskEvent;
 import org.junit.Rule;
 import org.junit.Test;
@@ -79,19 +79,19 @@ public class MultipleClientTest
     public void shouldOpenTaskSubscriptionsForDifferentTypes()
     {
         // given
-        final RecordingTaskHandler handler1 = new RecordingTaskHandler();
-        final RecordingTaskHandler handler2 = new RecordingTaskHandler();
+        final RecordingJobHandler handler1 = new RecordingJobHandler();
+        final RecordingJobHandler handler2 = new RecordingJobHandler();
 
         client1.tasks().newTaskSubscription(client1.getDefaultTopic())
             .handler(handler1)
-            .taskType("foo")
+            .jobType("foo")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("client1")
             .open();
 
         client2.tasks().newTaskSubscription(client2.getDefaultTopic())
             .handler(handler2)
-            .taskType("bar")
+            .jobType("bar")
             .lockTime(Duration.ofMinutes(5))
             .lockOwner("client2")
             .open();
@@ -101,13 +101,13 @@ public class MultipleClientTest
         final TaskEvent task2 = client1.tasks().create(client1.getDefaultTopic(), "bar").execute();
 
         // then
-        waitUntil(() -> handler1.getHandledTasks().size() + handler2.getHandledTasks().size() >= 2);
+        waitUntil(() -> handler1.getHandledJobs().size() + handler2.getHandledJobs().size() >= 2);
 
-        assertThat(handler1.getHandledTasks()).hasSize(1);
-        assertThat(handler1.getHandledTasks().get(0).getMetadata().getKey()).isEqualTo(task1.getMetadata().getKey());
+        assertThat(handler1.getHandledJobs()).hasSize(1);
+        assertThat(handler1.getHandledJobs().get(0).getMetadata().getKey()).isEqualTo(task1.getMetadata().getKey());
 
-        assertThat(handler2.getHandledTasks()).hasSize(1);
-        assertThat(handler2.getHandledTasks().get(0).getMetadata().getKey()).isEqualTo(task2.getMetadata().getKey());
+        assertThat(handler2.getHandledJobs()).hasSize(1);
+        assertThat(handler2.getHandledJobs().get(0).getMetadata().getKey()).isEqualTo(task2.getMetadata().getKey());
     }
 
 }

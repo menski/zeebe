@@ -15,7 +15,7 @@
  */
 package io.zeebe.broker.it.workflow;
 
-import static io.zeebe.broker.it.util.TopicEventRecorder.taskEvent;
+import static io.zeebe.broker.it.util.TopicEventRecorder.jobEvent;
 import static io.zeebe.broker.it.util.TopicEventRecorder.wfInstanceEvent;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,12 +87,12 @@ public class CancelWorkflowInstanceTest
             .execute();
 
         final PollableTaskSubscription taskSubscription = clientRule.tasks().newPollableTaskSubscription(clientRule.getDefaultTopic())
-            .taskType("test")
+            .jobType("test")
             .lockOwner("owner")
             .lockTime(Duration.ofMinutes(1))
             .open();
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("LOCKED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("LOCKED")));
 
         clientRule.workflows().cancel(workflowInstance).execute();
 
@@ -100,9 +100,9 @@ public class CancelWorkflowInstanceTest
         taskSubscription.poll((c, t) -> c.complete(t).withoutPayload().execute());
 
         // then
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("COMPLETE_REJECTED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("COMPLETE_REJECTED")));
 
-        assertThat(eventRecorder.hasTaskEvent(taskEvent("CANCELED")));
+        assertThat(eventRecorder.hasJobEvent(jobEvent("CANCELED")));
         assertThat(eventRecorder.hasWorkflowInstanceEvent(wfInstanceEvent("WORKFLOW_INSTANCE_CANCELED")));
     }
 
@@ -114,12 +114,12 @@ public class CancelWorkflowInstanceTest
             .bpmnProcessId("process")
             .execute();
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("CREATED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("CREATED")));
 
         clientRule.workflows().cancel(workflowInstance).execute();
 
         final PollableTaskSubscription taskSubscription = clientRule.tasks().newPollableTaskSubscription(clientRule.getDefaultTopic())
-                .taskType("test")
+                .jobType("test")
                 .lockOwner("owner")
                 .lockTime(Duration.ofMinutes(1))
                 .open();
@@ -130,9 +130,9 @@ public class CancelWorkflowInstanceTest
         // then
         assertThat(completedTasks).isEqualTo(0);
 
-        waitUntil(() -> eventRecorder.hasTaskEvent(taskEvent("LOCK_REJECTED")));
+        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent("LOCK_REJECTED")));
 
-        assertThat(eventRecorder.hasTaskEvent(taskEvent("CANCELED")));
+        assertThat(eventRecorder.hasJobEvent(jobEvent("CANCELED")));
         assertThat(eventRecorder.hasWorkflowInstanceEvent(wfInstanceEvent("WORKFLOW_INSTANCE_CANCELED")));
     }
 
