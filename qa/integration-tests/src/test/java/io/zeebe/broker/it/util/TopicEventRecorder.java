@@ -21,20 +21,26 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.junit.rules.ExternalResource;
+
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.client.api.clients.SubscriptionClient;
-import io.zeebe.client.api.events.*;
+import io.zeebe.client.api.commands.JobCommand;
+import io.zeebe.client.api.commands.JobCommand.JobCommandName;
+import io.zeebe.client.api.events.IncidentEvent;
 import io.zeebe.client.api.events.IncidentEvent.IncidentState;
+import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.api.events.JobEvent.JobState;
+import io.zeebe.client.api.events.WorkflowInstanceEvent;
 import io.zeebe.client.api.events.WorkflowInstanceEvent.WorkflowInstanceState;
 import io.zeebe.client.api.subscription.TopicSubscription;
-import org.junit.rules.ExternalResource;
 
 public class TopicEventRecorder extends ExternalResource
 {
     private static final String SUBSCRIPTION_NAME = "event-recorder";
 
     private final List<JobEvent> jobEvents = new CopyOnWriteArrayList<>();
+    private final List<JobCommand> jobCommands = new CopyOnWriteArrayList<>();
     private final List<WorkflowInstanceEvent> wfInstanceEvents = new CopyOnWriteArrayList<>();
     private final List<IncidentEvent> incidentEvents = new CopyOnWriteArrayList<>();
 
@@ -88,6 +94,7 @@ public class TopicEventRecorder extends ExternalResource
             subscription = client.newTopicSubscription()
                 .name(SUBSCRIPTION_NAME)
                 .jobEventHandler(e -> jobEvents.add(e))
+                .jobCommandHandler(jobCommands::add)
                 .workflowInstanceEventHandler(e -> wfInstanceEvents.add(e))
                 .incidentEventHandler(e -> incidentEvents.add(e))
                 .open();
@@ -132,9 +139,20 @@ public class TopicEventRecorder extends ExternalResource
         return jobEvents.stream().anyMatch(matcher);
     }
 
+    public boolean hasJobCommand(final Predicate<JobCommand> matcher)
+    {
+        return jobCommands.stream().anyMatch(matcher);
+    }
+
+
     public List<JobEvent> getJobEvents(final Predicate<JobEvent> matcher)
     {
         return jobEvents.stream().filter(matcher).collect(Collectors.toList());
+    }
+
+    public List<JobCommand> getJobCommands(final Predicate<JobCommand> matcher)
+    {
+        return jobCommands.stream().filter(matcher).collect(Collectors.toList());
     }
 
     public JobEvent getSingleJobEvent(final Predicate<JobEvent> matcher)
@@ -165,6 +183,11 @@ public class TopicEventRecorder extends ExternalResource
     public static Predicate<JobEvent> jobEvent(final JobState state)
     {
         return e -> e.getState().equals(state);
+    }
+
+    public static Predicate<JobCommand> jobCommand(final JobCommandName command)
+    {
+        return e -> e.getName().equals(command);
     }
 
     public static Predicate<JobEvent> jobType(final String type)
