@@ -156,6 +156,11 @@ public class TopicEventRecorder extends ExternalResource
         return jobEvents.stream().filter(matcher).collect(Collectors.toList());
     }
 
+    public List<JobEvent> getJobEvents(JobState state)
+    {
+        return jobEvents.stream().filter(jobEvent(state)).collect(Collectors.toList());
+    }
+
     public List<JobCommand> getJobCommands(final Predicate<JobCommand> matcher)
     {
         return jobCommands.stream().filter(matcher).collect(Collectors.toList());
@@ -169,6 +174,11 @@ public class TopicEventRecorder extends ExternalResource
     public boolean hasIncidentEvent(final Predicate<IncidentEvent> matcher)
     {
         return incidentEvents.stream().anyMatch(matcher);
+    }
+
+    public boolean hasIncidentEvent(IncidentState state)
+    {
+        return incidentEvents.stream().anyMatch(incidentEvent(state));
     }
 
     public List<IncidentEvent> getIncidentEvents(final Predicate<IncidentEvent> matcher)
