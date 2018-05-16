@@ -37,8 +37,6 @@ public class DeploymentClusteredTest
 {
     private static final int PARTITION_COUNT = 3;
 
-    private static final WorkflowDefinition INVALID_WORKFLOW = Bpmn.createExecutableWorkflow("invalid").done();
-
     private static final WorkflowDefinition WORKFLOW = Bpmn.createExecutableWorkflow("process")
                                                            .startEvent()
                                                            .endEvent()
@@ -234,7 +232,7 @@ public class DeploymentClusteredTest
 
         // expect
         expectedException.expect(ClientCommandRejectedException.class);
-        expectedException.expectMessage("Deployment was rejected");
+        expectedException.expectMessage("Command was rejected by broker");
         expectedException.expectMessage("Failed to deploy resource 'invalid.bpmn'");
         expectedException.expectMessage("Failed to read BPMN model");
 
@@ -242,7 +240,7 @@ public class DeploymentClusteredTest
         client.topicClient("test")
             .workflowClient()
             .newDeployCommand()
-            .addWorkflowModel(INVALID_WORKFLOW, "invalid.bpmn")
+            .addResourceStringUtf8("invalid", "invalid.bpmn")
             .send()
             .join();
     }

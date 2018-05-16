@@ -261,7 +261,7 @@ public class BrokerRecoveryTest
         final WorkflowInstanceEvent workflowInstanceV2 = clientRule.getWorkflowClient()
             .newCreateInstanceCommand()
             .bpmnProcessId("process")
-            .latestVersion()
+            .latestVersionForce()
             .send()
             .join();
 

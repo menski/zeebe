@@ -15,9 +15,7 @@
  */
 package io.zeebe.broker.it.job;
 
-import static io.zeebe.broker.it.util.TopicEventRecorder.jobCommand;
-import static io.zeebe.broker.it.util.TopicEventRecorder.jobEvent;
-import static io.zeebe.broker.it.util.TopicEventRecorder.jobRetries;
+import static io.zeebe.broker.it.util.TopicEventRecorder.*;
 import static io.zeebe.test.util.TestUtil.doRepeatedly;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,13 +24,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
-import org.junit.rules.Timeout;
-
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
 import io.zeebe.broker.it.util.RecordingJobHandler;
@@ -40,15 +31,15 @@ import io.zeebe.broker.it.util.TopicEventRecorder;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.clients.JobClient;
 import io.zeebe.client.api.clients.SubscriptionClient;
-import io.zeebe.client.api.commands.JobCommand;
+import io.zeebe.client.api.commands.*;
 import io.zeebe.client.api.commands.JobCommand.JobCommandName;
-import io.zeebe.client.api.commands.Topic;
-import io.zeebe.client.api.commands.Topics;
 import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.api.events.JobEvent.JobState;
 import io.zeebe.client.api.subscription.JobSubscription;
 import io.zeebe.client.impl.job.CreateJobCommandImpl;
 import io.zeebe.test.util.TestUtil;
+import org.junit.*;
+import org.junit.rules.*;
 
 public class JobSubscriptionTest
 {
@@ -131,16 +122,16 @@ public class JobSubscriptionTest
 
         // then
         assertThat(result.getKey()).isEqualTo(job.getKey());
-        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent(JobState.COMPLETED)));
+        waitUntil(() -> eventRecorder.hasJobEvent(state(JobState.COMPLETED)));
 
         final JobCommand createCommand = eventRecorder.getJobCommands(jobCommand(JobCommandName.CREATE)).get(0);
         assertThat(createCommand.getLockExpirationTime()).isNull();
         assertThat(createCommand.getLockOwner()).isNull();
 
-        final JobEvent createdEvent = eventRecorder.getJobEvents(jobEvent(JobState.CREATED)).get(0);
+        final JobEvent createdEvent = eventRecorder.getJobEvents(JobState.CREATED).get(0);
         assertThat(createdEvent.getLockExpirationTime()).isNull();
 
-        final JobEvent lockedEvent = eventRecorder.getJobEvents(jobEvent(JobState.LOCKED)).get(0);
+        final JobEvent lockedEvent = eventRecorder.getJobEvents(JobState.LOCKED).get(0);
         assertThat(lockedEvent.getLockExpirationTime()).isNotNull();
         assertThat(lockedEvent.getLockOwner()).isEqualTo("test");
     }
@@ -182,9 +173,9 @@ public class JobSubscriptionTest
         assertThat(subscribedJob.getType()).isEqualTo("foo");
         assertThat(subscribedJob.getLockExpirationTime()).isAfter(Instant.now());
 
-        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent(JobState.COMPLETED)));
+        waitUntil(() -> eventRecorder.hasJobEvent(state(JobState.COMPLETED)));
 
-        final JobEvent completedEvent = eventRecorder.getJobEvents(jobEvent(JobState.COMPLETED)).get(0);
+        final JobEvent completedEvent = eventRecorder.getJobEvents(JobState.COMPLETED).get(0);
         assertThat(completedEvent.getPayload()).isEqualTo("{\"a\":3}");
         assertThat(completedEvent.getCustomHeaders()).containsEntry("b", "2");
     }
@@ -212,7 +203,7 @@ public class JobSubscriptionTest
 
         createJobOfType("foo");
 
-        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent(JobState.CREATED)));
+        waitUntil(() -> eventRecorder.hasJobEvent(JobState.CREATED));
 
         assertThat(jobHandler.getHandledJobs()).isEmpty();
         assertThat(eventRecorder.hasJobCommand(c -> c.getName() == JobCommandName.LOCK)).isFalse();
@@ -277,8 +268,8 @@ public class JobSubscriptionTest
 
         final long jobKey = job.getKey();
         assertThat(jobHandler.getHandledJobs()).extracting("metadata.key").containsExactly(jobKey, jobKey);
-        assertThat(eventRecorder.hasJobEvent(jobEvent(JobState.FAILED))).isTrue();
-        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent(JobState.COMPLETED)));
+        assertThat(eventRecorder.hasJobEvent(state(JobState.FAILED))).isTrue();
+        waitUntil(() -> eventRecorder.hasJobEvent(state(JobState.COMPLETED)));
     }
 
     @Test
@@ -307,7 +298,7 @@ public class JobSubscriptionTest
             .lockOwner("test")
             .open();
 
-        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent(JobState.FAILED).and(jobRetries(0))));
+        waitUntil(() -> eventRecorder.hasJobEvent(state(JobState.FAILED).and(jobRetries(0))));
 
         assertThat(jobHandler.getHandledJobs()).hasSize(1);
     }
@@ -339,7 +330,7 @@ public class JobSubscriptionTest
             .open();
 
         waitUntil(() -> jobHandler.getHandledJobs().size() == 1);
-        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent(JobState.FAILED).and(jobRetries(0))));
+        waitUntil(() -> eventRecorder.hasJobEvent(state(JobState.FAILED).and(jobRetries(0))));
 
         // when
         final JobEvent updatedJob = jobClient.newUpdateRetriesCommand(job)
@@ -351,7 +342,7 @@ public class JobSubscriptionTest
         assertThat(updatedJob.getKey()).isEqualTo(job.getKey());
 
         waitUntil(() -> jobHandler.getHandledJobs().size() == 2);
-        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent(JobState.COMPLETED)));
+        waitUntil(() -> eventRecorder.hasJobEvent(state(JobState.COMPLETED)));
     }
 
     @Test
@@ -385,7 +376,7 @@ public class JobSubscriptionTest
             .hasSize(2)
             .extracting("metadata.key").containsExactly(jobKey, jobKey);
 
-        assertThat(eventRecorder.hasJobEvent(jobEvent(JobState.LOCK_EXPIRED))).isTrue();
+        assertThat(eventRecorder.hasJobEvent(state(JobState.LOCK_EXPIRED))).isTrue();
     }
 
     @Test

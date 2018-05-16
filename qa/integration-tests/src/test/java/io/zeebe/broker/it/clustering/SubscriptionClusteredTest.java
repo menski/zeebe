@@ -17,7 +17,6 @@ package io.zeebe.broker.it.clustering;
 
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -101,12 +100,6 @@ public class SubscriptionClusteredTest
         waitUntil(() -> receivedPartitionIds.size() == PARTITION_COUNT);
 
         assertThat(receivedPartitionIds).containsExactlyInAnyOrder(partitionIds);
-    }
-
-    @Test
-    public void shouldReceiveRaftEvent()
-    {
-        fail("assert that raft events are received and have a proper intent value");
     }
 
     protected void createJobOnPartition(String topic, int partition)

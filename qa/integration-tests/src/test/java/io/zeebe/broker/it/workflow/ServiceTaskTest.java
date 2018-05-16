@@ -15,8 +15,6 @@
  */
 package io.zeebe.broker.it.workflow;
 
-import static io.zeebe.broker.it.util.TopicEventRecorder.jobEvent;
-import static io.zeebe.broker.it.util.TopicEventRecorder.wfInstanceEvent;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
@@ -333,8 +331,8 @@ public class ServiceTaskTest
             .open();
 
         // then
-        waitUntil(() -> eventRecorder.getJobEvents(jobEvent(JobState.COMPLETED)).size() == instances);
-        waitUntil(() -> eventRecorder.getWorkflowInstanceEvents(wfInstanceEvent(WorkflowInstanceState.COMPLETED)).size() == instances);
+        waitUntil(() -> eventRecorder.getJobEvents(JobState.COMPLETED).size() == instances);
+        waitUntil(() -> eventRecorder.getWorkflowInstanceEvents(WorkflowInstanceState.COMPLETED).size() == instances);
     }
 
 }

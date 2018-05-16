@@ -15,16 +15,10 @@
  */
 package io.zeebe.broker.it.incident;
 
-import static io.zeebe.broker.it.util.TopicEventRecorder.incidentEvent;
-import static io.zeebe.broker.it.util.TopicEventRecorder.jobEvent;
+import static io.zeebe.broker.it.util.TopicEventRecorder.state;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 
 import java.time.Duration;
-
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
 
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
@@ -39,6 +33,8 @@ import io.zeebe.client.api.events.WorkflowInstanceEvent.WorkflowInstanceState;
 import io.zeebe.client.api.subscription.JobHandler;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
+import org.junit.*;
+import org.junit.rules.RuleChain;
 
 public class IncidentTest
 {
@@ -85,11 +81,10 @@ public class IncidentTest
             .send()
             .join();
 
-        waitUntil(() -> eventRecorder.hasIncidentEvent(incidentEvent(IncidentState.CREATED)));
+        waitUntil(() -> eventRecorder.hasIncidentEvent(IncidentState.CREATED));
 
         final WorkflowInstanceEvent activityInstanceEvent =
-                eventRecorder.getSingleWorkflowInstanceEvent(
-                    w -> WorkflowInstanceState.ACTIVITY_READY == w.getState());
+                eventRecorder.getSingleWorkflowInstanceEvent(WorkflowInstanceState.ACTIVITY_READY);
 
         // when
         workflowClient.newUpdatePayloadCommand(activityInstanceEvent)
@@ -98,8 +93,8 @@ public class IncidentTest
             .join();
 
         // then
-        waitUntil(() -> eventRecorder.hasJobEvent(jobEvent(JobState.CREATED)));
-        waitUntil(() -> eventRecorder.hasIncidentEvent(incidentEvent(IncidentState.RESOLVED)));
+        waitUntil(() -> eventRecorder.hasJobEvent(state(JobState.CREATED)));
+        waitUntil(() -> eventRecorder.hasIncidentEvent(IncidentState.RESOLVED));
     }
 
     @Test
@@ -117,7 +112,7 @@ public class IncidentTest
             .send()
             .join();
 
-        waitUntil(() -> eventRecorder.hasIncidentEvent(incidentEvent(IncidentState.CREATED)));
+        waitUntil(() -> eventRecorder.hasIncidentEvent(IncidentState.CREATED));
 
         // when
         workflowClient.newCancelInstanceCommand(workflowInstance)
@@ -125,7 +120,7 @@ public class IncidentTest
             .join();
 
         // then
-        waitUntil(() -> eventRecorder.hasIncidentEvent(incidentEvent(IncidentState.DELETED)));
+        waitUntil(() -> eventRecorder.hasIncidentEvent(IncidentState.DELETED));
     }
 
     @Test
@@ -157,7 +152,7 @@ public class IncidentTest
             .open();
 
         // then an incident is created
-        waitUntil(() -> eventRecorder.hasIncidentEvent(incidentEvent(IncidentState.CREATED)));
+        waitUntil(() -> eventRecorder.hasIncidentEvent(IncidentState.CREATED));
 
         // when the job retries are increased
         jobHandler.failJob = false;
@@ -170,7 +165,7 @@ public class IncidentTest
             .join();
 
         // then the incident is deleted
-        waitUntil(() -> eventRecorder.hasIncidentEvent(incidentEvent(IncidentState.DELETED)));
+        waitUntil(() -> eventRecorder.hasIncidentEvent(IncidentState.DELETED));
     }
 
     private static final class ControllableJobHandler implements JobHandler

@@ -111,29 +111,19 @@ public class TopicEventRecorder extends ExternalResource
         }
     }
 
-    public boolean hasWorkflowInstanceEvent(final Predicate<WorkflowInstanceEvent> matcher)
-    {
-        return wfInstanceEvents.stream().anyMatch(matcher);
-    }
-
     public boolean hasWorkflowInstanceEvent(final WorkflowInstanceState state)
     {
-        return wfInstanceEvents.stream().anyMatch(wfInstanceEvent(state));
+        return wfInstanceEvents.stream().anyMatch(state(state));
     }
 
-    public List<WorkflowInstanceEvent> getWorkflowInstanceEvents(final Predicate<WorkflowInstanceEvent> matcher)
+    public List<WorkflowInstanceEvent> getWorkflowInstanceEvents(final WorkflowInstanceState state)
     {
-        return wfInstanceEvents.stream().filter(matcher).collect(Collectors.toList());
-    }
-
-    public WorkflowInstanceEvent getSingleWorkflowInstanceEvent(final Predicate<WorkflowInstanceEvent> matcher)
-    {
-        return wfInstanceEvents.stream().filter(matcher).findFirst().orElseThrow(() -> new AssertionError("no event found"));
+        return wfInstanceEvents.stream().filter(state(state)).collect(Collectors.toList());
     }
 
     public WorkflowInstanceEvent getSingleWorkflowInstanceEvent(WorkflowInstanceState state)
     {
-        return wfInstanceEvents.stream().filter(wfInstanceEvent(state)).findFirst().orElseThrow(() -> new AssertionError("no event found"));
+        return wfInstanceEvents.stream().filter(state(state)).findFirst().orElseThrow(() -> new AssertionError("no event found"));
     }
 
     public boolean hasJobEvent(final Predicate<JobEvent> matcher)
@@ -143,7 +133,7 @@ public class TopicEventRecorder extends ExternalResource
 
     public boolean hasJobEvent(JobState state)
     {
-        return jobEvents.stream().anyMatch(jobEvent(state));
+        return jobEvents.stream().anyMatch(state(state));
     }
 
     public boolean hasJobCommand(final Predicate<JobCommand> matcher)
@@ -151,14 +141,9 @@ public class TopicEventRecorder extends ExternalResource
         return jobCommands.stream().anyMatch(matcher);
     }
 
-    public List<JobEvent> getJobEvents(final Predicate<JobEvent> matcher)
-    {
-        return jobEvents.stream().filter(matcher).collect(Collectors.toList());
-    }
-
     public List<JobEvent> getJobEvents(JobState state)
     {
-        return jobEvents.stream().filter(jobEvent(state)).collect(Collectors.toList());
+        return jobEvents.stream().filter(state(state)).collect(Collectors.toList());
     }
 
     public List<JobCommand> getJobCommands(final Predicate<JobCommand> matcher)
@@ -166,37 +151,17 @@ public class TopicEventRecorder extends ExternalResource
         return jobCommands.stream().filter(matcher).collect(Collectors.toList());
     }
 
-    public JobEvent getSingleJobEvent(final Predicate<JobEvent> matcher)
-    {
-        return jobEvents.stream().filter(matcher).findFirst().orElseThrow(() -> new AssertionError("no event found"));
-    }
-
-    public boolean hasIncidentEvent(final Predicate<IncidentEvent> matcher)
-    {
-        return incidentEvents.stream().anyMatch(matcher);
-    }
-
     public boolean hasIncidentEvent(IncidentState state)
     {
-        return incidentEvents.stream().anyMatch(incidentEvent(state));
+        return incidentEvents.stream().anyMatch(state(state));
     }
 
-    public List<IncidentEvent> getIncidentEvents(final Predicate<IncidentEvent> matcher)
-    {
-        return incidentEvents.stream().filter(matcher).collect(Collectors.toList());
-    }
-
-    public IncidentEvent getSingleIncidentEvent(final Predicate<IncidentEvent> matcher)
-    {
-        return incidentEvents.stream().filter(matcher).findFirst().orElseThrow(() -> new AssertionError("no event found"));
-    }
-
-    public static Predicate<WorkflowInstanceEvent> wfInstanceEvent(final WorkflowInstanceState state)
+    public static Predicate<WorkflowInstanceEvent> state(final WorkflowInstanceState state)
     {
         return e -> e.getState().equals(state);
     }
 
-    public static Predicate<JobEvent> jobEvent(final JobState state)
+    public static Predicate<JobEvent> state(final JobState state)
     {
         return e -> e.getState().equals(state);
     }
@@ -216,7 +181,7 @@ public class TopicEventRecorder extends ExternalResource
         return e -> e.getRetries() == retries;
     }
 
-    public static Predicate<IncidentEvent> incidentEvent(final IncidentState state)
+    public static Predicate<IncidentEvent> state(final IncidentState state)
     {
         return e -> e.getState().equals(state);
     }
