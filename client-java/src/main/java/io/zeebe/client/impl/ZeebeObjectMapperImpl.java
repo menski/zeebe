@@ -16,33 +16,70 @@
 package io.zeebe.client.impl;
 
 import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
+import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.api.record.Record;
 import io.zeebe.client.api.record.ZeebeObjectMapper;
 import io.zeebe.client.impl.data.MsgPackConverter;
+import io.zeebe.client.impl.event.JobEventImpl;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
 {
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper msgpackObjectMapper;
+    private final ObjectMapper jsonObjectMapper;
     private final InjectableValues.Std injectableValues;
+
+    private static final Map<Class<?>, Class<?>> RECORD_IMPL_CLASS_MAPPING;
+
+    static
+    {
+        RECORD_IMPL_CLASS_MAPPING = new HashMap<>();
+        RECORD_IMPL_CLASS_MAPPING.put(JobEvent.class, JobEventImpl.class);
+    }
+
+    abstract class StringPayloadMixin
+    {
+        @JsonIgnore
+        abstract byte[] getPayloadMsgPack();
+
+        @JsonIgnore
+        abstract void setPayload(byte[] msgPack);
+    }
+
+    abstract class MsgpackPayloadMixin
+    {
+        @JsonIgnore
+        abstract String getPayload();
+    }
 
     public ZeebeObjectMapperImpl(MsgPackConverter msgPackConverter)
     {
-        objectMapper = new ObjectMapper(new MessagePackFactory().setReuseResourceInGenerator(false).setReuseResourceInParser(false));
+        msgpackObjectMapper = new ObjectMapper(new MessagePackFactory().setReuseResourceInGenerator(false).setReuseResourceInParser(false));
 
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        msgpackObjectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        msgpackObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        msgpackObjectMapper.addMixIn(JobEventImpl.class, MsgpackPayloadMixin.class);
+
+        jsonObjectMapper = new ObjectMapper();
+        //jsonObjectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        jsonObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        jsonObjectMapper.addMixIn(JobEventImpl.class, StringPayloadMixin.class);
 
         this.injectableValues = new InjectableValues.Std();
 
         injectableValues.addValue(MsgPackConverter.class, msgPackConverter);
         injectableValues.addValue(ZeebeObjectMapper.class, this);
+        injectableValues.addValue(ZeebeObjectMapperImpl.class, this);
 
-        objectMapper.setInjectableValues(injectableValues);
+        msgpackObjectMapper.setInjectableValues(injectableValues);
+        jsonObjectMapper.setInjectableValues(injectableValues);
     }
 
     @Override
@@ -51,7 +88,9 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         try
         {
             // TODO Use {@link #writeValueAsBytes(Object)} instead
-            return objectMapper.writeValueAsString(record);
+            // return objectMapper.writeValueAsString(record);
+            //return new String(objectMapper.writeValueAsBytes(record));
+            return jsonObjectMapper.writeValueAsString(record);
         }
         catch (JsonProcessingException e)
         {
@@ -62,9 +101,16 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
     @Override
     public <T extends Record> T fromJson(String json, Class<T> recordClass)
     {
+        @SuppressWarnings("unchecked")
+        final Class<T> recordImplClass = (Class<T>) RECORD_IMPL_CLASS_MAPPING.get(recordClass);
+        if (recordImplClass == null)
+        {
+            throw new RuntimeException(String.format("Cannot deserialize JSON: unknown record class '%s'", recordClass));
+        }
+
         try
         {
-            return objectMapper.readValue(json, recordClass);
+            return jsonObjectMapper.readValue(json, recordImplClass);
         }
         catch (IOException e)
         {
@@ -76,7 +122,7 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
     {
         try
         {
-            return objectMapper.readValue(json, recordClass);
+            return msgpackObjectMapper.readValue(json, recordClass);
         }
         catch (IOException e)
         {
@@ -88,7 +134,7 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
     {
         try
         {
-            objectMapper.writeValue(outputStream, value);
+            msgpackObjectMapper.writeValue(outputStream, value);
         }
         catch (IOException e)
         {
@@ -100,11 +146,35 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
     {
         try
         {
-            return objectMapper.readValue(inputStream, valueType);
+            return msgpackObjectMapper.readValue(inputStream, valueType);
         }
         catch (IOException e)
         {
             throw new RuntimeException(String.format("Failed deserialize JSON stream to object of type '%s'", valueType), e);
+        }
+    }
+
+    public Object fromJson(String json)
+    {
+        try
+        {
+            return jsonObjectMapper.readValue(json, Map.class);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(String.format("Failed to deserialize JSON '%s'", json), e);
+        }
+    }
+
+    public String toJson(Object json)
+    {
+        try
+        {
+            return jsonObjectMapper.writeValueAsString(json);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(String.format("Failed to serialize object to JSON '%s'", json), e);
         }
     }
 

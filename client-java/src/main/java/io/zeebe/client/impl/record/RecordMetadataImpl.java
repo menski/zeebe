@@ -15,6 +15,7 @@
  */
 package io.zeebe.client.impl.record;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.zeebe.client.api.record.RecordMetadata;
 import io.zeebe.protocol.clientapi.ExecuteCommandRequestEncoder;
 import io.zeebe.protocol.intent.Intent;
@@ -84,6 +85,7 @@ public class RecordMetadataImpl implements RecordMetadata
         return RecordType.valueOf(recordType.name());
     }
 
+    @JsonIgnore
     public io.zeebe.protocol.clientapi.RecordType getProtocolRecordType()
     {
         return recordType;
@@ -100,6 +102,7 @@ public class RecordMetadataImpl implements RecordMetadata
         return ValueType.valueOf(valueType.name());
     }
 
+    @JsonIgnore
     public io.zeebe.protocol.clientapi.ValueType getProtocolValueType()
     {
         return valueType;
@@ -110,12 +113,19 @@ public class RecordMetadataImpl implements RecordMetadata
         this.valueType = valueType;
     }
 
+    // TODO can't be de-serialized from String
+    @JsonIgnore
     @Override
     public String getIntent()
     {
+        if (intent == null)
+        {
+            return "CREATED";
+        }
         return intent.name();
     }
 
+    @JsonIgnore
     public Intent getProtocolIntent()
     {
         return intent;

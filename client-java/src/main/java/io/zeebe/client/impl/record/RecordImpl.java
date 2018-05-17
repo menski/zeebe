@@ -46,7 +46,6 @@ public abstract class RecordImpl implements Record
     }
 
     @Override
-    @JsonIgnore
     public RecordMetadataImpl getMetadata()
     {
         return metadata;

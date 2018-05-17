@@ -22,9 +22,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.zeebe.client.api.record.JobRecord;
-import io.zeebe.client.api.record.ZeebeObjectMapper;
+import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.event.JobEventImpl;
 import io.zeebe.protocol.Protocol;
@@ -43,10 +42,12 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     private String type;
     private final MsgPackField payload;
 
-    public JobRecordImpl(ZeebeObjectMapper objectMapper, MsgPackConverter msgPackConverter, RecordType recordType)
+    private ZeebeObjectMapperImpl objectMapper;
+
+    public JobRecordImpl(ZeebeObjectMapperImpl objectMapper, MsgPackConverter msgPackConverter, RecordType recordType)
     {
         super(objectMapper, recordType, ValueType.JOB);
-
+        this.objectMapper = objectMapper;
         this.payload = new MsgPackField(msgPackConverter);
     }
 
@@ -160,6 +161,20 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     public void setPayload(InputStream jsonStream)
     {
         this.payload.setJson(jsonStream);
+    }
+
+    @JsonProperty("payload")
+    public Object getPayloadObject()
+    {
+        final String json = getPayload();
+        return objectMapper.fromJson(json);
+    }
+
+    @JsonProperty("payload")
+    public void setPayloadObject(Object payload)
+    {
+        final String json = objectMapper.toJson(payload);
+        setPayload(json);
     }
 
     @Override
