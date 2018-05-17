@@ -16,6 +16,8 @@
 package io.zeebe.client.impl.record;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import io.zeebe.client.api.record.RecordMetadata;
 import io.zeebe.protocol.clientapi.ExecuteCommandRequestEncoder;
 import io.zeebe.protocol.intent.Intent;
@@ -114,14 +116,9 @@ public class RecordMetadataImpl implements RecordMetadata
     }
 
     // TODO can't be de-serialized from String
-    @JsonIgnore
     @Override
     public String getIntent()
     {
-        if (intent == null)
-        {
-            return "CREATED";
-        }
         return intent.name();
     }
 
@@ -129,6 +126,13 @@ public class RecordMetadataImpl implements RecordMetadata
     public Intent getProtocolIntent()
     {
         return intent;
+    }
+
+
+    public void setIntentFromJackon(@JsonProperty("intent") String intent, @JsonProperty("valueType") io.zeebe.protocol.clientapi.ValueType valueType)
+    {
+        throw new RuntimeException("this has been called");
+//        this.intent = Intent.fromProtocolValue(valueType, intent);
     }
 
     public void setIntent(Intent intent)

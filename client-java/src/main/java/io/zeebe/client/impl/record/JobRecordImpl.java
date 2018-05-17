@@ -22,6 +22,9 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.zeebe.client.api.record.JobRecord;
 import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
@@ -135,7 +138,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     }
 
     @Override
-    @JsonIgnore
+    @JsonRawValue
     public String getPayload()
     {
         return payload.getAsJson();
@@ -164,14 +167,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     }
 
     @JsonProperty("payload")
-    public Object getPayloadObject()
-    {
-        final String json = getPayload();
-        return objectMapper.fromJson(json);
-    }
-
-    @JsonProperty("payload")
-    public void setPayloadObject(Object payload)
+    public void setPayloadObject(JsonNode payload)
     {
         final String json = objectMapper.toJson(payload);
         setPayload(json);
