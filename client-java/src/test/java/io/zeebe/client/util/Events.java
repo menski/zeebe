@@ -18,9 +18,9 @@ package io.zeebe.client.util;
 import java.time.Instant;
 
 import io.zeebe.client.impl.data.MsgPackConverter;
+import io.zeebe.client.impl.data.PayloadField;
 import io.zeebe.client.impl.event.JobEventImpl;
 import io.zeebe.client.impl.event.WorkflowInstanceEventImpl;
-import io.zeebe.client.impl.record.PayloadImpl;
 import io.zeebe.protocol.intent.JobIntent;
 import io.zeebe.protocol.intent.WorkflowInstanceIntent;
 import io.zeebe.test.broker.protocol.brokerapi.StubBrokerRule;
@@ -33,7 +33,7 @@ public class Events
     public static JobEventImpl exampleJob()
     {
         final JobEventImpl baseEvent = new JobEventImpl(null);
-        baseEvent.setPayloadField(new PayloadImpl(null, new MsgPackConverter()));
+        baseEvent.setPayloadField(new PayloadField(null, new MsgPackConverter()));
         baseEvent.setIntent(JobIntent.CREATED);
         baseEvent.setHeaders(Maps.newHashMap("defaultHeaderKey", "defaultHeaderVal"));
         baseEvent.setCustomHeaders(Maps.newHashMap("customHeaderKey", "customHeaderVal"));
@@ -52,12 +52,13 @@ public class Events
 
     public static WorkflowInstanceEventImpl exampleWorfklowInstance()
     {
-        final WorkflowInstanceEventImpl baseEvent = new WorkflowInstanceEventImpl(null, new MsgPackConverter());
+        final WorkflowInstanceEventImpl baseEvent = new WorkflowInstanceEventImpl(null);
+        baseEvent.setPayloadField(new PayloadField(null, new MsgPackConverter()));
         baseEvent.setIntent(WorkflowInstanceIntent.CREATED);
         baseEvent.setActivityId("some_activity");
         baseEvent.setBpmnProcessId("some_proceess");
         baseEvent.setKey(89);
-        baseEvent.setPayloadAsJson("{\"key\":\"val\"}");
+        baseEvent.setPayload("{\"key\":\"val\"}");
         baseEvent.setPartitionId(StubBrokerRule.TEST_PARTITION_ID);
         baseEvent.setTopicName(ClientApiRule.DEFAULT_TOPIC_NAME);
         baseEvent.setVersion(123);

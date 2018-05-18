@@ -23,6 +23,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.zeebe.client.api.record.JobRecord;
 import io.zeebe.client.impl.ZeebeObjectMapperImpl;
+import io.zeebe.client.impl.data.PayloadField;
 import io.zeebe.client.impl.event.JobEventImpl;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
@@ -37,7 +38,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     private String lockOwner;
     private Integer retries;
     private String type;
-    private PayloadImpl payload;
+    private PayloadField payload;
 
     public JobRecordImpl(ZeebeObjectMapperImpl objectMapper, RecordType recordType)
     {
@@ -54,7 +55,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
         this.lockOwner = base.lockOwner;
         this.retries = base.retries;
         this.type = base.type;
-        this.payload = new PayloadImpl(base.payload);
+        this.payload = new PayloadField(base.payload);
     }
 
     @Override
@@ -117,13 +118,13 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     }
 
     @JsonProperty("payload")
-    public PayloadImpl getPayloadField()
+    public PayloadField getPayloadField()
     {
         return payload;
     }
 
     @JsonProperty("payload")
-    public void setPayloadField(PayloadImpl payload)
+    public void setPayloadField(PayloadField payload)
     {
         this.payload = payload;
     }

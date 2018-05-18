@@ -17,12 +17,10 @@ package io.zeebe.client.impl.record;
 
 import java.io.InputStream;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.zeebe.client.api.record.WorkflowInstanceRecord;
 import io.zeebe.client.api.record.ZeebeObjectMapper;
-import io.zeebe.client.impl.data.MsgPackConverter;
+import io.zeebe.client.impl.data.PayloadField;
 import io.zeebe.client.impl.event.WorkflowInstanceEventImpl;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
@@ -35,13 +33,11 @@ public abstract class WorkflowInstanceRecordImpl extends RecordImpl implements W
     private long workflowKey = -1L;
     private long workflowInstanceKey = -1L;
     private String activityId;
-    private final MsgPackField payload;
+    private PayloadField payload;
 
-    public WorkflowInstanceRecordImpl(ZeebeObjectMapper objectMapper, MsgPackConverter converter, RecordType recordType)
+    public WorkflowInstanceRecordImpl(ZeebeObjectMapper objectMapper, RecordType recordType)
     {
         super(objectMapper, recordType, ValueType.WORKFLOW_INSTANCE);
-
-        this.payload = new MsgPackField(converter);
     }
 
     public WorkflowInstanceRecordImpl(WorkflowInstanceRecordImpl base, WorkflowInstanceIntent intent)
@@ -53,7 +49,7 @@ public abstract class WorkflowInstanceRecordImpl extends RecordImpl implements W
         this.workflowKey = base.getWorkflowKey();
         this.workflowInstanceKey = base.getWorkflowInstanceKey();
         this.activityId = base.getActivityId();
-        this.payload = new MsgPackField(base.payload);
+        this.payload = new PayloadField(base.payload);
     }
 
     @Override
@@ -100,33 +96,32 @@ public abstract class WorkflowInstanceRecordImpl extends RecordImpl implements W
         this.activityId = activityId;
     }
 
+    @JsonProperty("payload")
+    public PayloadField getPayloadField()
+    {
+        return payload;
+    }
+
+    @JsonProperty("payload")
+    public void setPayloadField(PayloadField payload)
+    {
+        this.payload = payload;
+    }
+
     @Override
-    @JsonIgnore
     public String getPayload()
     {
-        return payload.getAsJson();
+        return payload.getAsJsonString();
     }
 
-    @JsonProperty("payload")
-    public byte[] getPayloadMsgPack()
+    public void setPayload(String jsonString)
     {
-        return this.payload.getMsgPack();
+        this.payload.setJson(jsonString);
     }
 
-    @JsonProperty("payload")
-    public void setPayload(byte[] msgpack)
+    public void setPayload(InputStream jsonStream)
     {
-        this.payload.setMsgPack(msgpack);
-    }
-
-    public void setPayloadAsJson(String json)
-    {
-        this.payload.setJson(json);
-    }
-
-    public void setPayloadAsJson(InputStream json)
-    {
-        this.payload.setJson(json);
+        this.payload.setJson(jsonStream);
     }
 
     @Override

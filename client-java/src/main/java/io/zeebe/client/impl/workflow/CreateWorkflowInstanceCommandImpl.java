@@ -21,8 +21,7 @@ import io.zeebe.client.api.commands.CreateWorkflowInstanceCommandStep1;
 import io.zeebe.client.api.commands.CreateWorkflowInstanceCommandStep1.CreateWorkflowInstanceCommandStep2;
 import io.zeebe.client.api.commands.CreateWorkflowInstanceCommandStep1.CreateWorkflowInstanceCommandStep3;
 import io.zeebe.client.api.events.WorkflowInstanceEvent;
-import io.zeebe.client.impl.CommandImpl;
-import io.zeebe.client.impl.RequestManager;
+import io.zeebe.client.impl.*;
 import io.zeebe.client.impl.command.WorkflowInstanceCommandImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.record.RecordImpl;
@@ -33,25 +32,25 @@ public class CreateWorkflowInstanceCommandImpl extends CommandImpl<WorkflowInsta
 {
     private final WorkflowInstanceCommandImpl command;
 
-    public CreateWorkflowInstanceCommandImpl(final RequestManager commandManager, MsgPackConverter converter, String topic)
+    public CreateWorkflowInstanceCommandImpl(final RequestManager commandManager, ZeebeObjectMapperImpl objectMapper, MsgPackConverter converter, String topic)
     {
         super(commandManager);
 
-        command = new WorkflowInstanceCommandImpl(converter, WorkflowInstanceIntent.CREATE);
+        command = new WorkflowInstanceCommandImpl(objectMapper, converter, WorkflowInstanceIntent.CREATE);
         command.setTopicName(topic);
     }
 
     @Override
     public CreateWorkflowInstanceCommandStep3 payload(final InputStream payload)
     {
-        this.command.setPayloadAsJson(payload);
+        this.command.setPayload(payload);
         return this;
     }
 
     @Override
     public CreateWorkflowInstanceCommandStep3 payload(final String payload)
     {
-        this.command.setPayloadAsJson(payload);
+        this.command.setPayload(payload);
         return this;
     }
 

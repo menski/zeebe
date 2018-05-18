@@ -41,10 +41,8 @@ public class RecordMetadataImpl implements RecordMetadata
             @JsonProperty("valueType") io.zeebe.protocol.clientapi.ValueType valueType,
             @JsonProperty("recordType") io.zeebe.protocol.clientapi.RecordType recordType)
     {
-        System.out.println("<== meta ==>");
-
         // is used by Jackson to de-serialize a JSON String
-        // resolve the intent from a given String and the value type
+        // resolve the intent from the given String and the value type
         this.valueType = valueType;
         this.recordType = recordType;
         this.intent = Intent.fromProtocolValue(valueType, intent);

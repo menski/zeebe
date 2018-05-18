@@ -32,6 +32,7 @@ import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.api.record.Record;
 import io.zeebe.client.api.record.ZeebeObjectMapper;
 import io.zeebe.client.impl.data.MsgPackConverter;
+import io.zeebe.client.impl.data.PayloadField;
 import io.zeebe.client.impl.event.JobEventImpl;
 import io.zeebe.client.impl.record.*;
 import io.zeebe.protocol.Protocol;
@@ -117,7 +118,7 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
 
     }
 
-    class MsgpackPayloadSerializer extends StdSerializer<PayloadImpl>
+    class MsgpackPayloadSerializer extends StdSerializer<PayloadField>
     {
 
         protected MsgpackPayloadSerializer()
@@ -125,20 +126,20 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
             this(null);
         }
 
-        protected MsgpackPayloadSerializer(Class<PayloadImpl> t)
+        protected MsgpackPayloadSerializer(Class<PayloadField> t)
         {
             super(t);
         }
 
         @Override
-        public void serialize(PayloadImpl value, JsonGenerator gen, SerializerProvider provider) throws IOException
+        public void serialize(PayloadField value, JsonGenerator gen, SerializerProvider provider) throws IOException
         {
             gen.writeBinary(value.getMsgPack());
         }
 
     }
 
-    class MsgpackPayloadDeserializer extends StdDeserializer<PayloadImpl>
+    class MsgpackPayloadDeserializer extends StdDeserializer<PayloadField>
     {
         private MsgPackConverter msgPackConverter;
         private ZeebeObjectMapperImpl objectMapper;
@@ -156,11 +157,11 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         }
 
         @Override
-        public PayloadImpl deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException
+        public PayloadField deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException
         {
             final byte[] msgpackPayload = p.getBinaryValue();
 
-            final PayloadImpl payload = new PayloadImpl(objectMapper, msgPackConverter);
+            final PayloadField payload = new PayloadField(objectMapper, msgPackConverter);
             payload.setMsgPack(msgpackPayload);
 
             return payload;
@@ -168,7 +169,7 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
 
     }
 
-    class StringPayloadSerializer extends StdSerializer<PayloadImpl>
+    class StringPayloadSerializer extends StdSerializer<PayloadField>
     {
 
         protected StringPayloadSerializer()
@@ -176,13 +177,13 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
             this(null);
         }
 
-        protected StringPayloadSerializer(Class<PayloadImpl> t)
+        protected StringPayloadSerializer(Class<PayloadField> t)
         {
             super(t);
         }
 
         @Override
-        public void serialize(PayloadImpl value, JsonGenerator gen, SerializerProvider provider) throws IOException
+        public void serialize(PayloadField value, JsonGenerator gen, SerializerProvider provider) throws IOException
         {
             final String json = value.getAsJsonString();
             gen.writeRawValue(json);
@@ -190,7 +191,7 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
 
     }
 
-    class StringPayloadDeserializer extends StdDeserializer<PayloadImpl>
+    class StringPayloadDeserializer extends StdDeserializer<PayloadField>
     {
         private MsgPackConverter msgPackConverter;
         private ZeebeObjectMapperImpl objectMapper;
@@ -208,13 +209,13 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         }
 
         @Override
-        public PayloadImpl deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException
+        public PayloadField deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException
         {
             final TreeNode node = p.readValueAsTree();
             final String json = node.toString();
             // objectMapper.toJson(node)
 
-            final PayloadImpl payload = new PayloadImpl(objectMapper, msgPackConverter);
+            final PayloadField payload = new PayloadField(objectMapper, msgPackConverter);
             payload.setJson(json);
 
             return payload;
@@ -235,8 +236,8 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         msgpackModule.addSerializer(Instant.class, new MsgpackInstantSerializer());
         msgpackModule.addDeserializer(Instant.class, new MsgpackInstantDeserializer());
 
-        msgpackModule.addSerializer(PayloadImpl.class, new MsgpackPayloadSerializer());
-        msgpackModule.addDeserializer(PayloadImpl.class, new MsgpackPayloadDeserializer(this, msgPackConverter));
+        msgpackModule.addSerializer(PayloadField.class, new MsgpackPayloadSerializer());
+        msgpackModule.addDeserializer(PayloadField.class, new MsgpackPayloadDeserializer(this, msgPackConverter));
 
         msgpackObjectMapper.registerModule(msgpackModule);
 
@@ -248,8 +249,8 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         jsonObjectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
         final SimpleModule stringPayloadModule = new SimpleModule();
-        stringPayloadModule.addSerializer(PayloadImpl.class, new StringPayloadSerializer());
-        stringPayloadModule.addDeserializer(PayloadImpl.class, new StringPayloadDeserializer(this, msgPackConverter));
+        stringPayloadModule.addSerializer(PayloadField.class, new StringPayloadSerializer());
+        stringPayloadModule.addDeserializer(PayloadField.class, new StringPayloadDeserializer(this, msgPackConverter));
         jsonObjectMapper.registerModule(stringPayloadModule);
 
 

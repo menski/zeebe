@@ -17,7 +17,7 @@ package io.zeebe.client.impl.subscription;
 
 import static io.zeebe.util.VarDataUtil.readBytes;
 
-import io.zeebe.client.api.record.ZeebeObjectMapper;
+import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.record.GeneralRecordImpl;
 import io.zeebe.protocol.clientapi.*;
@@ -32,12 +32,12 @@ public class SubscribedEventCollector implements ClientMessageHandler
 
     private final SubscribedEventHandler eventHandler;
     private final MsgPackConverter converter;
-    private final ZeebeObjectMapper objectMapper;
+    private final ZeebeObjectMapperImpl objectMapper;
 
     public SubscribedEventCollector(
             SubscribedEventHandler eventHandler,
             MsgPackConverter converter,
-            ZeebeObjectMapper objectMapper)
+            ZeebeObjectMapperImpl objectMapper)
     {
         this.eventHandler = eventHandler;
         this.converter = converter;

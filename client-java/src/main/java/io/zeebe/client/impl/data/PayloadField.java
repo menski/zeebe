@@ -1,45 +1,33 @@
-/*
- * Copyright © 2017 camunda services GmbH (info@camunda.com)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package io.zeebe.client.impl.record;
+package io.zeebe.client.impl.data;
 
 import java.io.InputStream;
 
-import io.zeebe.client.impl.data.MsgPackConverter;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 
-public class MsgPackField
+public class PayloadField
 {
     private final MsgPackConverter msgPackConverter;
+    private final ZeebeObjectMapperImpl objectMapper;
 
     private String json;
     private byte[] msgPack;
 
-    public MsgPackField(MsgPackConverter msgPackConverter)
+    public PayloadField(ZeebeObjectMapperImpl objectMapper, MsgPackConverter msgPackConverter)
     {
+        this.objectMapper = objectMapper;
         this.msgPackConverter = msgPackConverter;
     }
 
-    public MsgPackField(MsgPackField other)
+    public PayloadField(PayloadField other)
     {
+        this.objectMapper = other.objectMapper;
         this.msgPackConverter = other.msgPackConverter;
         this.msgPack = other.msgPack;
         this.json = other.json;
     }
 
-
-    public String getAsJson()
+    public String getAsJsonString()
     {
         return json;
     }
@@ -82,9 +70,21 @@ public class MsgPackField
         }
     }
 
+    public void set(JsonNode node)
+    {
+        final String json = objectMapper.toJson(node);
+        setJson(json);
+    }
+
     public byte[] getMsgPack()
     {
         return msgPack;
+    }
+
+    public void clear()
+    {
+        this.msgPack = null;
+        this.json = null;
     }
 
 

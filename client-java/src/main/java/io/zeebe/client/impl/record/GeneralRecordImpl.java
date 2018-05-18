@@ -15,17 +15,18 @@
  */
 package io.zeebe.client.impl.record;
 
-import io.zeebe.client.api.record.ZeebeObjectMapper;
+import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
+import io.zeebe.client.impl.data.PayloadField;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
 
 public class GeneralRecordImpl extends RecordImpl
 {
-    private final MsgPackField content;
+    private final PayloadField content;
 
     public GeneralRecordImpl(
-            final ZeebeObjectMapper objectMapper,
+            final ZeebeObjectMapperImpl objectMapper,
             final MsgPackConverter converter,
             final RecordType recordType,
             final ValueType valueType,
@@ -33,7 +34,7 @@ public class GeneralRecordImpl extends RecordImpl
     {
         super(objectMapper, recordType, valueType);
 
-        this.content = new MsgPackField(converter);
+        this.content = new PayloadField(objectMapper, converter);
         this.content.setMsgPack(rawContent);
     }
 
