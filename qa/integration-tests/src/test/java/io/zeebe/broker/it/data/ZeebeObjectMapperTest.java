@@ -47,7 +47,7 @@ public class ZeebeObjectMapperTest
     public ExpectedException exception = ExpectedException.none();
 
     @Test
-    public void shouldCompleteJob() throws InterruptedException
+    public void test1() throws InterruptedException
     {
         // given
         eventRecorder.startRecordingEvents();
@@ -86,6 +86,28 @@ public class ZeebeObjectMapperTest
         waitUntil(() -> eventRecorder.hasJobEvent(state(JobState.COMPLETED)));
 
         System.out.println(">> " + eventRecorder.getJobEvents(JobState.COMPLETED).get(0));
+    }
+
+    @Test
+    public void test2() throws InterruptedException
+    {
+        // given
+        clientRule.getJobClient()
+                .newCreateCommand()
+                .jobType("foo")
+                .payload("{\"foo\":\"bar\"}")
+                .send()
+                .join();
+
+        clientRule.getSubscriptionClient()
+            .newTopicSubscription()
+            .name("job-sub")
+            .jobEventHandler(e -> System.out.println(">>> " + e.toJson()))
+            .recordHandler(r -> System.out.println("??? " + r.toJson()))
+            .startAtHeadOfTopic()
+            .open();
+
+        Thread.sleep(5000);
     }
 
 }

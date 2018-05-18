@@ -1,5 +1,6 @@
 package io.zeebe.client.data;
 
+import java.time.Instant;
 import java.util.Properties;
 
 import io.zeebe.client.ZeebeClient;
@@ -37,7 +38,7 @@ public class ZeebeObjectMapperTest
         jobEvent.setCustomHeaders(Maps.newHashMap("customHeaderKey", "customHeaderVal"));
         jobEvent.setKey(79);
         jobEvent.setLockOwner("foo");
-        jobEvent.setLockTime(System.currentTimeMillis());
+        jobEvent.setLockExpirationTime(Instant.now());
         jobEvent.setPartitionId(StubBrokerRule.TEST_PARTITION_ID);
         jobEvent.setPayload("{\"key\":\"val\"}");
         jobEvent.setRetries(123);
@@ -59,7 +60,7 @@ public class ZeebeObjectMapperTest
         jobEvent.setCustomHeaders(Maps.newHashMap("customHeaderKey", "customHeaderVal"));
         jobEvent.setKey(79);
         jobEvent.setLockOwner("foo");
-        jobEvent.setLockTime(System.currentTimeMillis());
+        jobEvent.setLockExpirationTime(Instant.now());
         jobEvent.setPartitionId(StubBrokerRule.TEST_PARTITION_ID);
         jobEvent.setPayload("{\"key\":\"val\"}");
         jobEvent.setRetries(123);

@@ -27,7 +27,6 @@ import io.zeebe.client.api.record.JobRecord;
 import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.event.JobEventImpl;
-import io.zeebe.protocol.Protocol;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
 import io.zeebe.protocol.intent.JobIntent;
@@ -37,7 +36,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     private Map<String, Object> headers = new HashMap<>();
     private Map<String, Object> customHeaders = new HashMap<>();
 
-    private long lockTime = Protocol.INSTANT_NULL_VALUE;
+    private Instant lockTime;
     private String lockOwner;
     private Integer retries;
     private String type;
@@ -80,29 +79,11 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     @JsonProperty("lockTime")
     public Instant getLockExpirationTime()
     {
-        if (lockTime == Protocol.INSTANT_NULL_VALUE)
-        {
-            return null;
-        }
-        else
-        {
-            return Instant.ofEpochMilli(lockTime);
-        }
-    }
-
-    @JsonProperty("lockTime")
-    public void getLockExpirationTime(Instant lockTime)
-    {
-        this.lockTime = lockTime.toEpochMilli();
-    }
-
-    @JsonProperty("lockTime")
-    public long getLockTime()
-    {
         return lockTime;
     }
 
-    public void setLockTime(long lockTime)
+    @JsonProperty("lockTime")
+    public void setLockExpirationTime(Instant lockTime)
     {
         this.lockTime = lockTime;
     }

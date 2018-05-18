@@ -22,8 +22,11 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.api.record.Record;
@@ -32,6 +35,7 @@ import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.event.JobEventImpl;
 import io.zeebe.client.impl.record.JobRecordImpl;
 import io.zeebe.client.impl.record.RecordMetadataImpl;
+import io.zeebe.protocol.Protocol;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
@@ -70,22 +74,63 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         abstract RecordMetadataImpl getMetadata();
     }
 
-    abstract class JobRecordMsgpackMixin extends MsgpackPayloadMixin
+    class MsgpackInstantSerializer extends StdSerializer<Instant>
     {
-        @JsonIgnore
-        abstract String getLockExpirationTime();
 
-        @JsonIgnore
-        abstract void getLockExpirationTime(Instant lockTime);
+        protected MsgpackInstantSerializer()
+        {
+            this(null);
+        }
+
+        protected MsgpackInstantSerializer(Class<Instant> t)
+        {
+            super(t);
+        }
+
+        @Override
+        public void serialize(Instant value, JsonGenerator gen, SerializerProvider provider) throws IOException
+        {
+            if (value == null)
+            {
+                gen.writeNumber(Protocol.INSTANT_NULL_VALUE);
+            }
+            else
+            {
+                final long epochMilli = value.toEpochMilli();
+                gen.writeNumber(epochMilli);
+            }
+        }
+
     }
 
-    abstract class JobRecordJsonMixin extends StringPayloadMixin
+    class MsgpackInstantDeserializer extends StdDeserializer<Instant>
     {
-        @JsonIgnore
-        abstract long getLockTime();
+        protected MsgpackInstantDeserializer()
+        {
+            this(null);
+        }
 
-        @JsonIgnore
-        abstract void setLockTime(long lockTime);
+        protected MsgpackInstantDeserializer(Class<?> vc)
+        {
+            super(vc);
+        }
+
+        @Override
+        public Instant deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException
+        {
+            final long epochMilli = p.getLongValue();
+
+            if (epochMilli == Protocol.INSTANT_NULL_VALUE)
+            {
+                return null;
+            }
+            else
+            {
+                return Instant.ofEpochMilli(epochMilli);
+            }
+
+        }
+
     }
 
     public ZeebeObjectMapperImpl(MsgPackConverter msgPackConverter)
@@ -94,14 +139,17 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
 
         msgpackObjectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         msgpackObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        //msgpackObjectMapper.addMixIn(JobRecordImpl.class, MsgpackPayloadMixin.class);
-        msgpackObjectMapper.addMixIn(JobRecordImpl.class, JobRecordMsgpackMixin.class);
+        msgpackObjectMapper.addMixIn(JobRecordImpl.class, MsgpackPayloadMixin.class);
+
+        // serialize INSTANT as timestamp millis
+        final SimpleModule msgpackInstantModule = new SimpleModule();
+        msgpackInstantModule.addSerializer(Instant.class, new MsgpackInstantSerializer());
+        msgpackInstantModule.addDeserializer(Instant.class, new MsgpackInstantDeserializer());
+        msgpackObjectMapper.registerModule(msgpackInstantModule);
 
         jsonObjectMapper = new ObjectMapper();
-        //jsonObjectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         jsonObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        //jsonObjectMapper.addMixIn(JobRecordImpl.class, StringPayloadMixin.class);
-        jsonObjectMapper.addMixIn(JobRecordImpl.class, JobRecordJsonMixin.class);
+        jsonObjectMapper.addMixIn(JobRecordImpl.class, StringPayloadMixin.class);
 
         // serialize INSTANT as ISO-8601 String
         jsonObjectMapper.registerModule(new JavaTimeModule());

@@ -15,6 +15,8 @@
  */
 package io.zeebe.client.util;
 
+import java.time.Instant;
+
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.event.JobEventImpl;
 import io.zeebe.client.impl.event.WorkflowInstanceEventImpl;
@@ -35,7 +37,7 @@ public class Events
         baseEvent.setCustomHeaders(Maps.newHashMap("customHeaderKey", "customHeaderVal"));
         baseEvent.setKey(79);
         baseEvent.setLockOwner("foo");
-        baseEvent.setLockTime(System.currentTimeMillis());
+        baseEvent.setLockExpirationTime(Instant.now());
         baseEvent.setPartitionId(StubBrokerRule.TEST_PARTITION_ID);
         baseEvent.setPayload("{\"key\":\"val\"}");
         baseEvent.setRetries(123);
