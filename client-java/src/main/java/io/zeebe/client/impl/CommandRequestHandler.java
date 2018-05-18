@@ -69,6 +69,7 @@ public class CommandRequestHandler implements RequestResponseHandler
 
         encoder
             .partitionId(metadata.getPartitionId())
+            .sourceRecordPosition(metadata.getSourceRecordPosition())
             .position(metadata.getPosition());
 
         if (metadata.getKey() < 0)
@@ -146,6 +147,7 @@ public class CommandRequestHandler implements RequestResponseHandler
         metadata.setPartitionId(partitionId);
         metadata.setTopicName(command.getMetadata().getTopicName());
         metadata.setPosition(position);
+        metadata.setSourceRecordPosition(decoder.sourceRecordPosition());
         metadata.setRecordType(recordType);
         metadata.setValueType(valueType);
         metadata.setIntent(intent);

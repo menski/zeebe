@@ -24,8 +24,8 @@ public interface WorkflowInstanceCommand extends WorkflowInstanceRecord
 
     enum WorkflowInstanceCommandName
     {
-        CREATE_WORKFLOW_INSTANCE,
-        CANCEL_WORKFLOW_INSTANCE,
+        CREATE,
+        CANCEL,
         UPDATE_PAYLOAD,
     }
 }

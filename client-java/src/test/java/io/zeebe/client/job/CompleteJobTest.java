@@ -55,8 +55,10 @@ public class CompleteJobTest
     {
         // given
         final JobEventImpl baseEvent = Events.exampleJob();
+        baseEvent.setPosition(2L);
+        baseEvent.setSourceRecordPosition(1L);
 
-        brokerRule.jobs().registerCompleteCommand();
+        brokerRule.jobs().registerCompleteCommand(executeCommandResponseBuilder -> executeCommandResponseBuilder.sourceRecordPosition(3L));
 
         final String updatedPayload = "{\"fruit\":\"cherry\"}";
 
@@ -72,6 +74,7 @@ public class CompleteJobTest
         assertThat(request.valueType()).isEqualTo(ValueType.JOB);
         assertThat(request.partitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
         assertThat(request.position()).isEqualTo(baseEvent.getMetadata().getPosition());
+        assertThat(request.sourceRecordPosition()).isEqualTo(1L);
 
         assertThat(request.getCommand()).containsOnly(
                 entry("lockTime", baseEvent.getLockExpirationTime().toEpochMilli()),
@@ -85,6 +88,8 @@ public class CompleteJobTest
         assertThat(jobEvent.getMetadata().getKey()).isEqualTo(baseEvent.getKey());
         assertThat(jobEvent.getMetadata().getTopicName()).isEqualTo(StubBrokerRule.TEST_TOPIC_NAME);
         assertThat(jobEvent.getMetadata().getPartitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
+        assertThat(jobEvent.getMetadata().getSourceRecordPosition()).isEqualTo(3L);
+        assertThat(jobEvent.getSourceRecordPosition()).isEqualTo(3L);
 
         assertThat(jobEvent.getState()).isEqualTo(JobState.COMPLETED);
         assertThat(jobEvent.getHeaders()).isEqualTo(baseEvent.getHeaders());

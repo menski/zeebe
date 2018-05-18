@@ -48,8 +48,10 @@ public class UpdateJobRetriesTest
     {
         // given
         final JobEventImpl baseEvent = Events.exampleJob();
+        baseEvent.setPosition(2L);
+        baseEvent.setSourceRecordPosition(1L);
 
-        brokerRule.jobs().registerUpdateRetriesCommand();
+        brokerRule.jobs().registerUpdateRetriesCommand(3L);
 
         // when
         final JobEvent jobEvent = clientRule.jobClient()
@@ -62,6 +64,7 @@ public class UpdateJobRetriesTest
         final ExecuteCommandRequest request = brokerRule.getReceivedCommandRequests().get(0);
         assertThat(request.valueType()).isEqualTo(ValueType.JOB);
         assertThat(request.partitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
+        assertThat(request.sourceRecordPosition()).isEqualTo(1L);
 
         assertThat(request.getCommand()).containsOnly(
                 entry("lockTime", baseEvent.getLockExpirationTime().toEpochMilli()),
@@ -75,6 +78,8 @@ public class UpdateJobRetriesTest
         assertThat(jobEvent.getMetadata().getKey()).isEqualTo(baseEvent.getKey());
         assertThat(jobEvent.getMetadata().getTopicName()).isEqualTo(StubBrokerRule.TEST_TOPIC_NAME);
         assertThat(jobEvent.getMetadata().getPartitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
+        assertThat(jobEvent.getMetadata().getSourceRecordPosition()).isEqualTo(3L);
+        assertThat(jobEvent.getSourceRecordPosition()).isEqualTo(3L);
 
         assertThat(jobEvent.getState()).isEqualTo(JobState.RETRIES_UPDATED);
         assertThat(jobEvent.getHeaders()).isEqualTo(baseEvent.getHeaders());
@@ -83,6 +88,7 @@ public class UpdateJobRetriesTest
         assertThat(jobEvent.getType()).isEqualTo(baseEvent.getType());
         assertThat(jobEvent.getPayload()).isEqualTo(baseEvent.getPayload());
         assertThat(jobEvent.getRetries()).isEqualTo(4);
+
     }
 
     @Test

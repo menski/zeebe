@@ -51,6 +51,12 @@ public class ExecuteCommandRequestBuilder
         return this;
     }
 
+    public ExecuteCommandRequestBuilder sourceRecordPosition(long sourceRecordPosition)
+    {
+        request.sourceRecordPosition(sourceRecordPosition);
+        return this;
+    }
+
     public ExecuteCommandRequestBuilder key(long key)
     {
         request.key(key);

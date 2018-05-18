@@ -58,6 +58,12 @@ public class ExecuteCommandResponse implements BufferReader
         return responseDecoder.position();
     }
 
+    public long sourceRecordPosition()
+    {
+        return responseDecoder.sourceRecordPosition();
+    }
+
+
     public long key()
     {
         return responseDecoder.key();

@@ -57,8 +57,10 @@ public class CancelWorkflowInstanceTest
     {
         // given
         final WorkflowInstanceEventImpl baseEvent = Events.exampleWorfklowInstance();
+        baseEvent.setPosition(2L);
+        baseEvent.setSourceRecordPosition(1L);
 
-        brokerRule.workflowInstances().registerCancelCommand();
+        brokerRule.workflowInstances().registerCancelCommand(3L);
 
         // when
         final WorkflowInstanceEvent workflowInstanceEvent = clientRule.workflowClient()
@@ -73,6 +75,7 @@ public class CancelWorkflowInstanceTest
         assertThat(commandRequest.valueType()).isEqualTo(ValueType.WORKFLOW_INSTANCE);
         assertThat(commandRequest.intent()).isEqualTo(WorkflowInstanceIntent.CANCEL);
         assertThat(commandRequest.key()).isEqualTo(baseEvent.getKey());
+        assertThat(commandRequest.sourceRecordPosition()).isEqualTo(1L);
         assertThat(commandRequest.partitionId()).isEqualTo(baseEvent.getMetadata().getPartitionId());
         assertThat(commandRequest.position()).isEqualTo(baseEvent.getMetadata().getPosition());
 
@@ -85,6 +88,7 @@ public class CancelWorkflowInstanceTest
               entry("payload", baseEvent.getPayloadMsgPack()));
 
         assertThat(workflowInstanceEvent.getState()).isEqualTo(WorkflowInstanceState.CANCELED);
+        assertThat(workflowInstanceEvent.getSourceRecordPosition()).isEqualTo(3L);
     }
 
     @Test

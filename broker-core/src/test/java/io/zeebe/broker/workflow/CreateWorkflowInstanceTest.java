@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.zeebe.test.broker.protocol.clientapi.*;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,10 +51,6 @@ import io.zeebe.protocol.clientapi.ValueType;
 import io.zeebe.protocol.intent.DeploymentIntent;
 import io.zeebe.protocol.intent.JobIntent;
 import io.zeebe.protocol.intent.WorkflowInstanceIntent;
-import io.zeebe.test.broker.protocol.clientapi.ClientApiRule;
-import io.zeebe.test.broker.protocol.clientapi.ExecuteCommandResponse;
-import io.zeebe.test.broker.protocol.clientapi.SubscribedRecord;
-import io.zeebe.test.broker.protocol.clientapi.TestTopicClient;
 import io.zeebe.util.StreamUtil;
 
 
@@ -104,6 +101,7 @@ public class CreateWorkflowInstanceTest
                 .done());
 
         // when
+        // then
         final ExecuteCommandResponse resp = apiRule.createCmdRequest()
                 .type(ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.CREATE)
                 .command()
@@ -113,6 +111,7 @@ public class CreateWorkflowInstanceTest
 
         // then
         assertThat(resp.key()).isGreaterThanOrEqualTo(0L);
+        assertThat(resp.sourceRecordPosition()).isGreaterThan(resp.key());
         assertThat(resp.partitionId()).isEqualTo(apiRule.getDefaultPartitionId());
         assertThat(resp.intent()).isEqualTo(WorkflowInstanceIntent.CREATED);
         assertThat(resp.getValue())
@@ -417,7 +416,7 @@ public class CreateWorkflowInstanceTest
     }
 
     @Test
-    public void shouldCreateMultipleWorkflowInstancesForDifferentVersionsAfterTimeout() throws InterruptedException
+    public void shouldCreateMultipleWorkflowInstancesForDifferentVersionsAfterTimeout()
     {
         // given
         final WorkflowDefinition workflow = Bpmn.createExecutableWorkflow("process")

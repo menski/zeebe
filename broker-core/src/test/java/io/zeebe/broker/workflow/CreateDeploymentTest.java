@@ -28,7 +28,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import io.zeebe.test.broker.protocol.clientapi.SubscribedRecord;
 import org.assertj.core.util.Files;
 import org.junit.Rule;
 import org.junit.Test;
@@ -73,9 +75,14 @@ public class CreateDeploymentTest
                 .done()
                 .sendAndAwait();
 
+        final ExecuteCommandResponse response = apiRule.openTopicSubscription("", 0).partitionId(Protocol.SYSTEM_PARTITION).await();
+
+        final List<SubscribedRecord> collect = apiRule.topic(Protocol.SYSTEM_PARTITION).receiveRecords().limit(2).collect(Collectors.toList());
+
         // then
         assertThat(resp.key()).isGreaterThanOrEqualTo(0L);
         assertThat(resp.position()).isGreaterThanOrEqualTo(0L);
+        assertThat(resp.sourceRecordPosition()).isEqualTo(resp.key());
         assertThat(resp.partitionId()).isEqualTo(Protocol.SYSTEM_PARTITION);
         assertThat(resp.recordType()).isEqualTo(RecordType.EVENT);
         assertThat(resp.intent()).isEqualTo(DeploymentIntent.CREATED);

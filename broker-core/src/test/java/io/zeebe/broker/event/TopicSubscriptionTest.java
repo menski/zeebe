@@ -135,7 +135,7 @@ public class TopicSubscriptionTest
     }
 
     @Test
-    public void shouldPushEvents() throws InterruptedException
+    public void shouldPushEvents()
     {
         // given
         final long fixedClockEpoch = 1L;
@@ -174,6 +174,7 @@ public class TopicSubscriptionTest
         assertThat(jobEvent.recordType()).isEqualTo(RecordType.COMMAND);
         assertThat(jobEvent.valueType()).isEqualTo(ValueType.JOB);
         assertThat(jobEvent.intent()).isEqualTo(JobIntent.CREATE);
+        assertThat(jobEvent.sourceRecordPosition()).isEqualTo(0);
         assertThat(jobEvent.timestamp()).isEqualTo(fixedClockEpoch);
 
         jobEvent = jobEvents.get(1);
@@ -184,6 +185,7 @@ public class TopicSubscriptionTest
         assertThat(jobEvent.recordType()).isEqualTo(RecordType.EVENT);
         assertThat(jobEvent.valueType()).isEqualTo(ValueType.JOB);
         assertThat(jobEvent.intent()).isEqualTo(JobIntent.CREATED);
+        assertThat(jobEvent.sourceRecordPosition()).isEqualTo(jobKey);
         assertThat(jobEvent.timestamp()).isEqualTo(fixedClockEpoch);
     }
 

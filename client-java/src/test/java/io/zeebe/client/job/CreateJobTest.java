@@ -44,7 +44,6 @@ import org.junit.rules.RuleChain;
 public class CreateJobTest
 {
 
-    public ActorSchedulerRule schedulerRule = new ActorSchedulerRule();
     public ClientRule clientRule = new ClientRule();
     public StubBrokerRule brokerRule = new StubBrokerRule();
 
@@ -74,6 +73,7 @@ public class CreateJobTest
             .event()
             .key(123)
             .position(456)
+            .sourceRecordPosition(1L)
             .intent(JobIntent.CREATED)
             .value()
               .allOf((r) -> r.getCommand())
@@ -113,6 +113,8 @@ public class CreateJobTest
         assertThat(job.getMetadata().getTopicName()).isEqualTo(StubBrokerRule.TEST_TOPIC_NAME);
         assertThat(job.getMetadata().getPartitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
         assertThat(job.getMetadata().getPosition()).isEqualTo(456);
+        assertThat(job.getMetadata().getSourceRecordPosition()).isEqualTo(1L);
+        assertThat(job.getSourceRecordPosition()).isEqualTo(1L);
 
         assertThat(job.getState()).isEqualTo(JobState.CREATED);
         assertThat(job.getHeaders()).isEmpty();

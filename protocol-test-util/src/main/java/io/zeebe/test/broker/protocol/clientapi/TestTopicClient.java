@@ -210,27 +210,29 @@ public class TestTopicClient
             event.remove("payload");
         }
 
-        final ExecuteCommandResponse response = completeJob(jobEvent.key(), event);
+        final ExecuteCommandResponse response = completeJob(jobEvent.position(), jobEvent.key(), event);
 
         assertThat(response.recordType()).isEqualTo(RecordType.EVENT);
         assertThat(response.intent()).isEqualTo(JobIntent.COMPLETED);
     }
 
-    public ExecuteCommandResponse completeJob(long key, Map<String, Object> event)
+    public ExecuteCommandResponse completeJob(long sourceRecordPosition, long key, Map<String, Object> event)
     {
         return apiRule.createCmdRequest()
             .type(ValueType.JOB, JobIntent.COMPLETE)
             .key(key)
+            .sourceRecordPosition(sourceRecordPosition)
             .command()
                 .putAll(event)
             .done()
             .sendAndAwait();
     }
 
-    public ExecuteCommandResponse failJob(long key, Map<String, Object> event)
+    public ExecuteCommandResponse failJob(long sourceRecordPosition, long key, Map<String, Object> event)
     {
         return apiRule.createCmdRequest()
             .type(ValueType.JOB, JobIntent.FAIL)
+            .sourceRecordPosition(sourceRecordPosition)
             .key(key)
             .command()
                 .putAll(event)
@@ -238,10 +240,11 @@ public class TestTopicClient
             .sendAndAwait();
     }
 
-    public ExecuteCommandResponse updateJobRetries(long key, Map<String, Object> event)
+    public ExecuteCommandResponse updateJobRetries(long sourceRecordPosition, long key, Map<String, Object> event)
     {
         return apiRule.createCmdRequest()
             .type(ValueType.JOB, JobIntent.UPDATE_RETRIES)
+            .sourceRecordPosition(sourceRecordPosition)
             .key(key)
             .command()
                 .putAll(event)

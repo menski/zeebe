@@ -43,6 +43,7 @@ public class SubscribedRecordBuilder implements BufferWriter
 
     protected int partitionId;
     protected long position;
+    private long sourceRecordPosition;
     protected long key;
     protected long subscriberKey;
     protected SubscriptionType subscriptionType;
@@ -67,6 +68,12 @@ public class SubscribedRecordBuilder implements BufferWriter
     public SubscribedRecordBuilder position(long position)
     {
         this.position = position;
+        return this;
+    }
+
+    public SubscribedRecordBuilder sourceRecordPosition(long sourceRecordPosition)
+    {
+        this.sourceRecordPosition = sourceRecordPosition;
         return this;
     }
 
@@ -161,6 +168,7 @@ public class SubscribedRecordBuilder implements BufferWriter
             .intent(intent.value())
             .key(key)
             .position(position)
+            .sourceRecordPosition(sourceRecordPosition)
             .subscriberKey(subscriberKey)
             .subscriptionType(subscriptionType)
             .partitionId(partitionId)

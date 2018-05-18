@@ -92,6 +92,7 @@ public class JobSubscriptionTest
                 .ofTypeJob()
                 .withIntent(JobIntent.LOCKED)
                 .getFirst();
+
         assertThat(jobEvent.key()).isEqualTo(response.key());
         assertThat(jobEvent.position()).isGreaterThan(response.position());
         assertThat(jobEvent.timestamp()).isGreaterThan(response.timestamp());
@@ -108,6 +109,45 @@ public class JobSubscriptionTest
             .collect(Collectors.toList());
 
         assertThat(jobStates).containsExactly(JobIntent.CREATE, JobIntent.CREATED, JobIntent.LOCK, JobIntent.LOCKED);
+    }
+
+    @Test
+    public void shouldContainSourceRecordPosition() throws InterruptedException
+    {
+        // given
+        apiRule
+            .createControlMessageRequest()
+            .messageType(ControlMessageType.ADD_JOB_SUBSCRIPTION)
+            .partitionId(apiRule.getDefaultPartitionId())
+            .data()
+            .put("jobType", "foo")
+            .put("lockDuration", 10000L)
+            .put("lockOwner", "bar")
+            .put("credits", 5)
+            .done()
+            .send();
+
+        // when
+        final ExecuteCommandResponse response = testClient.createJob("foo");
+
+        // then
+        final SubscribedRecord createdJobEvent = testClient.receiveEvents()
+            .ofTypeJob()
+            .withIntent(JobIntent.CREATED)
+            .getFirst();
+
+        final SubscribedRecord lockJobEvent = testClient.receiveCommands()
+            .ofTypeJob()
+            .withIntent(JobIntent.LOCK)
+            .getFirst();
+
+        final SubscribedRecord lockedJobEvent = testClient.receiveEvents()
+            .ofTypeJob()
+            .withIntent(JobIntent.LOCKED)
+            .getFirst();
+
+        assertThat(lockJobEvent.sourceRecordPosition()).isEqualTo(createdJobEvent.position());
+        assertThat(lockedJobEvent.sourceRecordPosition()).isEqualTo(lockJobEvent.position());
     }
 
     @Test
@@ -622,7 +662,7 @@ public class JobSubscriptionTest
         // when
         final Map<String, Object> event = new HashMap<>(job.value());
         event.put("retries", 0);
-        testClient.failJob(job.key(), event);
+        testClient.failJob(job.position(), job.key(), event);
 
         // then
         Thread.sleep(500);

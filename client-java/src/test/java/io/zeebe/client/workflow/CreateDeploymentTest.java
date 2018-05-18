@@ -84,6 +84,7 @@ public class CreateDeploymentTest
 
         assertThat(deployment.getDeploymentTopic()).isEqualTo("test-topic");
         assertThat(deployment.getMetadata().getTopicName()).isEqualTo(Protocol.SYSTEM_TOPIC);
+        assertThat(deployment.getSourceRecordPosition()).isEqualTo(1L);
     }
 
     @Test
@@ -102,6 +103,7 @@ public class CreateDeploymentTest
         deployedWorkflows.add(deployedWorkflow);
 
         brokerRule.deployments().registerCreateCommand(b -> b
+            .sourceRecordPosition(1L)
             .key(2L)
             .value().put("deployedWorkflows", deployedWorkflows).done());
 
@@ -127,6 +129,7 @@ public class CreateDeploymentTest
         assertThat(deployment.getDeployedWorkflows()).hasSize(2);
         assertThat(deployment.getDeployedWorkflows()).extracting("bpmnProcessId").contains("foo", "bar");
         assertThat(deployment.getDeployedWorkflows()).extracting("version").contains(1, 2);
+        assertThat(deployment.getSourceRecordPosition()).isEqualTo(1L);
     }
 
     @Test

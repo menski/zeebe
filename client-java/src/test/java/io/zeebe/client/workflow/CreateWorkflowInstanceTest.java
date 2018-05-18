@@ -62,7 +62,8 @@ public class CreateWorkflowInstanceTest
     {
         // given
         brokerRule.workflowInstances().registerCreateCommand(b ->
-            b.value()
+            b.sourceRecordPosition(1L)
+             .value()
                 .allOf(r -> r.getCommand())
                 .put("version", 1)
                 .put("workflowInstanceKey", 1)
@@ -91,6 +92,7 @@ public class CreateWorkflowInstanceTest
         assertThat(workflowInstance.getVersion()).isEqualTo(1);
         assertThat(workflowInstance.getWorkflowInstanceKey()).isEqualTo(1);
         assertThat(workflowInstance.getPayload()).isNull();
+        assertThat(workflowInstance.getSourceRecordPosition()).isEqualTo(1);
     }
 
     @Test
@@ -100,10 +102,11 @@ public class CreateWorkflowInstanceTest
         final String payload = "{\"bar\":4}";
 
         brokerRule.workflowInstances().registerCreateCommand(b ->
-                b.value()
-                    .allOf(r -> r.getCommand())
-                    .put("version", 1)
-                    .put("workflowInstanceKey", 1)
+            b.sourceRecordPosition(1L)
+             .value()
+                .allOf(r -> r.getCommand())
+                .put("version", 1)
+                .put("workflowInstanceKey", 1)
                 .done());
 
         // when
@@ -128,6 +131,7 @@ public class CreateWorkflowInstanceTest
         assertThat(workflowInstance.getVersion()).isEqualTo(1);
         assertThat(workflowInstance.getWorkflowInstanceKey()).isEqualTo(1);
         assertThat(workflowInstance.getPayload()).isEqualTo(payload);
+        assertThat(workflowInstance.getSourceRecordPosition()).isEqualTo(1);
     }
 
     @Test
@@ -135,8 +139,9 @@ public class CreateWorkflowInstanceTest
     {
         // given
         brokerRule.workflowInstances().registerCreateCommand(b ->
-                b.value()
-                    .allOf(r -> r.getCommand())
+            b.sourceRecordPosition(1L)
+                .value()
+                .allOf(r -> r.getCommand())
                     .put("workflowInstanceKey", 1)
                 .done());
 
@@ -159,6 +164,7 @@ public class CreateWorkflowInstanceTest
         assertThat(workflowInstance.getBpmnProcessId()).isEqualTo("foo");
         assertThat(workflowInstance.getVersion()).isEqualTo(2);
         assertThat(workflowInstance.getWorkflowInstanceKey()).isEqualTo(1);
+        assertThat(workflowInstance.getSourceRecordPosition()).isEqualTo(1);
     }
 
     @Test
@@ -166,8 +172,9 @@ public class CreateWorkflowInstanceTest
     {
         // given
         brokerRule.workflowInstances().registerCreateCommand(b ->
-                b.value()
-                    .allOf(r -> r.getCommand())
+            b.sourceRecordPosition(1L)
+                .value()
+                .allOf(r -> r.getCommand())
                     .put("workflowInstanceKey", 1)
                     .put("payload", msgPackConverter.convertToMsgPack("{ \"bar\" : 4 }"))
                 .done());
@@ -188,6 +195,7 @@ public class CreateWorkflowInstanceTest
 
         assertThat(workflowInstance.getWorkflowKey()).isEqualTo(2);
         assertThat(workflowInstance.getWorkflowInstanceKey()).isEqualTo(1);
+        assertThat(workflowInstance.getSourceRecordPosition()).isEqualTo(1);
     }
 
     @Test

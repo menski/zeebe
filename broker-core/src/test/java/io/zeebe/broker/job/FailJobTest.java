@@ -74,7 +74,7 @@ public class FailJobTest
         final SubscribedRecord subscribedEvent = receiveSingleSubscribedEvent();
 
         // when
-        final ExecuteCommandResponse response = client.failJob(subscribedEvent.key(), subscribedEvent.value());
+        final ExecuteCommandResponse response = client.failJob(subscribedEvent.position(), subscribedEvent.key(), subscribedEvent.value());
 
         // then
         assertThat(response.recordType()).isEqualTo(RecordType.EVENT);
@@ -120,7 +120,7 @@ public class FailJobTest
         event.put("type", "foo");
 
         // when
-        final ExecuteCommandResponse response = client.failJob(key, event);
+        final ExecuteCommandResponse response = client.failJob(0, key, event);
 
         // then
         assertThat(response.recordType()).isEqualTo(RecordType.COMMAND_REJECTION);
@@ -139,10 +139,10 @@ public class FailJobTest
         final SubscribedRecord subscribedEvent = receiveSingleSubscribedEvent();
         apiRule.closeJobSubscription(subscriberKey).await();
 
-        client.failJob(subscribedEvent.key(), subscribedEvent.value());
+        client.failJob(subscribedEvent.position(), subscribedEvent.key(), subscribedEvent.value());
 
         // when
-        final ExecuteCommandResponse response = client.failJob(subscribedEvent.key(), subscribedEvent.value());
+        final ExecuteCommandResponse response = client.failJob(subscribedEvent.position(), subscribedEvent.key(), subscribedEvent.value());
 
         // then
         assertThat(response.recordType()).isEqualTo(RecordType.COMMAND_REJECTION);
@@ -157,7 +157,7 @@ public class FailJobTest
         final ExecuteCommandResponse createResponse = client.createJob(JOB_TYPE);
 
         // when
-        final ExecuteCommandResponse response = client.failJob(createResponse.key(), createResponse.getValue());
+        final ExecuteCommandResponse response = client.failJob(createResponse.position(), createResponse.key(), createResponse.getValue());
 
         // then
         assertThat(response.recordType()).isEqualTo(RecordType.COMMAND_REJECTION);
@@ -175,10 +175,10 @@ public class FailJobTest
 
         final SubscribedRecord subscribedEvent = receiveSingleSubscribedEvent();
 
-        client.completeJob(subscribedEvent.key(), subscribedEvent.value());
+        client.completeJob(subscribedEvent.position(), subscribedEvent.key(), subscribedEvent.value());
 
         // when
-        final ExecuteCommandResponse response = client.failJob(subscribedEvent.key(), subscribedEvent.value());
+        final ExecuteCommandResponse response = client.failJob(subscribedEvent.position(), subscribedEvent.key(), subscribedEvent.value());
 
         // then
         assertThat(response.recordType()).isEqualTo(RecordType.COMMAND_REJECTION);
@@ -209,7 +209,7 @@ public class FailJobTest
         event.put("lockOwner", "jan");
 
         // when
-        final ExecuteCommandResponse response = client.failJob(subscribedEvent.key(), event);
+        final ExecuteCommandResponse response = client.failJob(subscribedEvent.position(), subscribedEvent.key(), event);
 
         // then
         assertThat(response.recordType()).isEqualTo(RecordType.COMMAND_REJECTION);

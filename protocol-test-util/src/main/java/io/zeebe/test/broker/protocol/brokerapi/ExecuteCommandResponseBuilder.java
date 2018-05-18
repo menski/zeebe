@@ -15,14 +15,14 @@
  */
 package io.zeebe.test.broker.protocol.brokerapi;
 
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.intent.Intent;
 import io.zeebe.test.broker.protocol.MsgPackHelper;
 import io.zeebe.test.util.collection.MapFactoryBuilder;
+
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class ExecuteCommandResponseBuilder
 {
@@ -69,6 +69,17 @@ public class ExecuteCommandResponseBuilder
     public ExecuteCommandResponseBuilder position(Function<ExecuteCommandRequest, Long> positionFunction)
     {
         commandResponseWriter.setPositionFunction(positionFunction);
+        return this;
+    }
+
+    public ExecuteCommandResponseBuilder sourceRecordPosition(long sourceRecordPosition)
+    {
+        return sourceRecordPosition((r) -> sourceRecordPosition);
+    }
+
+    public ExecuteCommandResponseBuilder sourceRecordPosition(Function<ExecuteCommandRequest, Long> sourceRecordPositionFunction)
+    {
+        commandResponseWriter.setSourceRecordPositionFunction(sourceRecordPositionFunction);
         return this;
     }
 

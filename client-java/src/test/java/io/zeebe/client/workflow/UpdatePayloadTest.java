@@ -66,10 +66,13 @@ public class UpdatePayloadTest
     {
         // given
         final WorkflowInstanceEventImpl baseEvent = Events.exampleWorfklowInstance();
+        baseEvent.setPosition(3L);
         baseEvent.setKey(2L);
+        baseEvent.setSourceRecordPosition(1L);
         baseEvent.setWorkflowInstanceKey(1L);
 
-        brokerRule.workflowInstances().registerUpdatedPayloadCommand();
+        brokerRule.workflowInstances()
+            .registerUpdatedPayloadCommand(4L);
 
         // when
         final WorkflowInstanceEvent workflowInstanceEvent = workflowTopicClient.newUpdatePayloadCommand(baseEvent)
@@ -83,6 +86,7 @@ public class UpdatePayloadTest
         final ExecuteCommandRequest request = brokerRule.getReceivedCommandRequests().get(0);
         assertThat(request.valueType()).isEqualTo(ValueType.WORKFLOW_INSTANCE);
         assertThat(request.intent()).isEqualTo(WorkflowInstanceIntent.UPDATE_PAYLOAD);
+        assertThat(request.sourceRecordPosition()).isEqualTo(1L);
         assertThat(request.key()).isEqualTo(2L);
         assertThat(request.partitionId()).isEqualTo(baseEvent.getMetadata().getPartitionId());
         assertThat(request.position()).isEqualTo(baseEvent.getMetadata().getPosition());
@@ -95,6 +99,7 @@ public class UpdatePayloadTest
                 entry("activityId", baseEvent.getActivityId()),
                 entry("payload", ENCODED_PAYLOAD));
 
+        assertThat(workflowInstanceEvent.getSourceRecordPosition()).isEqualTo(4L);
         assertThat(workflowInstanceEvent.getState()).isEqualByComparingTo(WorkflowInstanceState.PAYLOAD_UPDATED);
     }
 

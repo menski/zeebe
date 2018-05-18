@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
 import io.zeebe.broker.it.util.TopicEventRecorder;
+import io.zeebe.client.api.commands.WorkflowInstanceCommand;
 import io.zeebe.client.api.events.WorkflowInstanceEvent;
 import io.zeebe.client.api.events.WorkflowInstanceEvent.WorkflowInstanceState;
 import io.zeebe.client.cmd.ClientCommandRejectedException;
@@ -81,14 +82,20 @@ public class UpdatePayloadTest
         final WorkflowInstanceEvent activtyInstance = eventRecorder.getSingleWorkflowInstanceEvent(WorkflowInstanceState.ACTIVITY_ACTIVATED);
 
         // when
-        clientRule.getWorkflowClient()
+        final WorkflowInstanceEvent payloadUpdated = clientRule.getWorkflowClient()
             .newUpdatePayloadCommand(activtyInstance)
             .payload(PAYLOAD)
             .send()
             .join();
 
+
         // then
         waitUntil(() -> eventRecorder.hasWorkflowInstanceEvent(WorkflowInstanceState.PAYLOAD_UPDATED));
+        final WorkflowInstanceCommand updatePayload =
+            eventRecorder.getSingleWorkflowInstanceCommand(WorkflowInstanceCommand.WorkflowInstanceCommandName.UPDATE_PAYLOAD);
+
+        
+//        assertThat(payloadUpdated.getSourceRecordPosition()).isEqualTo()
 
         clientRule.getSubscriptionClient()
             .newJobSubscription()

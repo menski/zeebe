@@ -27,6 +27,7 @@ public class RecordMetadataImpl implements RecordMetadata
     private long key = ExecuteCommandRequestEncoder.keyNullValue();
     private long position = ExecuteCommandRequestEncoder.positionNullValue();
     private long timestamp = ExecuteCommandResponseEncoder.timestampNullValue();
+    private long sourceRecordPosition = ExecuteCommandRequestEncoder.sourceRecordPositionNullValue();
     private io.zeebe.protocol.clientapi.RecordType recordType;
     private io.zeebe.protocol.clientapi.ValueType valueType;
     private Intent intent;
@@ -67,6 +68,17 @@ public class RecordMetadataImpl implements RecordMetadata
     public void setPosition(long position)
     {
         this.position = position;
+    }
+
+    @Override
+    public long getSourceRecordPosition()
+    {
+        return sourceRecordPosition;
+    }
+
+    public void setSourceRecordPosition(long sourceRecordPosition)
+    {
+        this.sourceRecordPosition = sourceRecordPosition;
     }
 
     @Override
@@ -143,7 +155,8 @@ public class RecordMetadataImpl implements RecordMetadata
     public String toString()
     {
         return "EventMetadata [topicName=" + topicName + ", partitionId=" + partitionId + ", key=" +
-                key + ", position=" + position + ", eventType=" + recordType + ", timestamp=" + timestamp + "]";
+                key + ", position=" + position + ", sourceRecordPosition=" + sourceRecordPosition +
+                ", eventType=" + recordType + ", timestamp=" + timestamp + "]";
     }
 
 }
