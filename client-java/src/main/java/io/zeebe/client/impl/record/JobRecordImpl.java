@@ -20,8 +20,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.zeebe.client.api.record.JobRecord;
 import io.zeebe.client.impl.ZeebeObjectMapperImpl;
@@ -40,7 +39,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     private String lockOwner;
     private Integer retries;
     private String type;
-    private final MsgPackField payload;
+    private PayloadImpl payload;
 
     private ZeebeObjectMapperImpl objectMapper;
 
@@ -48,7 +47,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     {
         super(objectMapper, recordType, ValueType.JOB);
         this.objectMapper = objectMapper;
-        this.payload = new MsgPackField(msgPackConverter);
+        this.payload = new PayloadImpl(objectMapper, msgPackConverter); // new MsgPackField(msgPackConverter);
     }
 
     public JobRecordImpl(JobRecordImpl base, JobIntent intent)
@@ -61,7 +60,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
         this.lockOwner = base.lockOwner;
         this.retries = base.retries;
         this.type = base.type;
-        this.payload = new MsgPackField(base.payload);
+        this.payload = new PayloadImpl(base.payload); // new MsgPackField(base.payload);
     }
 
     @Override
@@ -123,35 +122,53 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
         this.lockOwner = lockOwner;
     }
 
-    @Override
-    @JsonRawValue
-    public String getPayload()
+    @JsonProperty("payload")
+    public void setPayload(PayloadImpl payload)
     {
-        return payload.getAsJson();
+        this.payload = payload;
     }
 
+    @JsonProperty("payload")
+    public PayloadImpl getPayloadAs()
+    {
+        return payload;
+    }
+
+    @Override
+    @JsonRawValue
+    @JsonIgnore
+    public String getPayload()
+    {
+        return payload.getAsJsonString();
+    }
+
+    @JsonIgnore
     @JsonProperty("payload")
     public byte[] getPayloadMsgPack()
     {
         return payload.getMsgPack();
     }
 
+    @JsonIgnore
     @JsonProperty("payload")
     public void setPayload(byte[] msgPack)
     {
         this.payload.setMsgPack(msgPack);
     }
 
+    @JsonIgnore
     public void setPayload(String json)
     {
         this.payload.setJson(json);
     }
 
+    @JsonIgnore
     public void setPayload(InputStream jsonStream)
     {
         this.payload.setJson(jsonStream);
     }
 
+    @JsonIgnore
     @JsonProperty("payload")
     public void setPayloadObject(JsonNode payload)
     {

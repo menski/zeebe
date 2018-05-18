@@ -33,7 +33,7 @@ import io.zeebe.client.api.record.Record;
 import io.zeebe.client.api.record.ZeebeObjectMapper;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.event.JobEventImpl;
-import io.zeebe.client.impl.record.JobRecordImpl;
+import io.zeebe.client.impl.record.PayloadImpl;
 import io.zeebe.client.impl.record.RecordMetadataImpl;
 import io.zeebe.protocol.Protocol;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
@@ -133,27 +133,151 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
 
     }
 
+    class MsgpackPayloadSerializer extends StdSerializer<PayloadImpl>
+    {
+
+        protected MsgpackPayloadSerializer()
+        {
+            this(null);
+        }
+
+        protected MsgpackPayloadSerializer(Class<PayloadImpl> t)
+        {
+            super(t);
+        }
+
+        @Override
+        public void serialize(PayloadImpl value, JsonGenerator gen, SerializerProvider provider) throws IOException
+        {
+            gen.writeBinary(value.getMsgPack());
+        }
+
+    }
+
+    class MsgpackPayloadDeserializer extends StdDeserializer<PayloadImpl>
+    {
+        private MsgPackConverter msgPackConverter;
+        private ZeebeObjectMapperImpl objectMapper;
+
+        protected MsgpackPayloadDeserializer(ZeebeObjectMapperImpl objectMapper, MsgPackConverter msgPackConverter)
+        {
+            this(null);
+            this.msgPackConverter = msgPackConverter;
+            this.objectMapper = objectMapper;
+        }
+
+        protected MsgpackPayloadDeserializer(Class<?> vc)
+        {
+            super(vc);
+        }
+
+        @Override
+        public PayloadImpl deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException
+        {
+            final byte[] msgpackPayload = p.getBinaryValue();
+
+            final PayloadImpl payload = new PayloadImpl(objectMapper, msgPackConverter);
+            payload.setMsgPack(msgpackPayload);
+
+            return payload;
+        }
+
+    }
+
+    class StringPayloadSerializer extends StdSerializer<PayloadImpl>
+    {
+
+        protected StringPayloadSerializer()
+        {
+            this(null);
+        }
+
+        protected StringPayloadSerializer(Class<PayloadImpl> t)
+        {
+            super(t);
+        }
+
+        @Override
+        public void serialize(PayloadImpl value, JsonGenerator gen, SerializerProvider provider) throws IOException
+        {
+            final String json = value.getAsJsonString();
+            gen.writeRawValue(json);
+        }
+
+    }
+
+    class StringPayloadDeserializer extends StdDeserializer<PayloadImpl>
+    {
+        private MsgPackConverter msgPackConverter;
+        private ZeebeObjectMapperImpl objectMapper;
+
+        protected StringPayloadDeserializer(ZeebeObjectMapperImpl objectMapper, MsgPackConverter msgPackConverter)
+        {
+            this(null);
+            this.msgPackConverter = msgPackConverter;
+            this.objectMapper = objectMapper;
+        }
+
+        protected StringPayloadDeserializer(Class<?> vc)
+        {
+            super(vc);
+        }
+
+        @Override
+        public PayloadImpl deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException
+        {
+
+            System.out.println("=== magic ===");
+            //final String json = p.getValueAsString();
+
+            final TreeNode node = p.readValueAsTree();
+            // final String json = objectMapper.toJson(node);
+            final String json = node.toString();
+
+
+
+            System.out.println("------");
+            System.out.println(json);
+
+            final PayloadImpl payload = new PayloadImpl(objectMapper, msgPackConverter);
+            payload.setJson(json);
+
+            return payload;
+        }
+
+    }
+
     public ZeebeObjectMapperImpl(MsgPackConverter msgPackConverter)
     {
         msgpackObjectMapper = new ObjectMapper(new MessagePackFactory().setReuseResourceInGenerator(false).setReuseResourceInParser(false));
 
         msgpackObjectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         msgpackObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        msgpackObjectMapper.addMixIn(JobRecordImpl.class, MsgpackPayloadMixin.class);
+        //msgpackObjectMapper.addMixIn(JobRecordImpl.class, MsgpackPayloadMixin.class);
 
         // serialize INSTANT as timestamp millis
         final SimpleModule msgpackInstantModule = new SimpleModule();
         msgpackInstantModule.addSerializer(Instant.class, new MsgpackInstantSerializer());
         msgpackInstantModule.addDeserializer(Instant.class, new MsgpackInstantDeserializer());
+
+        msgpackInstantModule.addSerializer(PayloadImpl.class, new MsgpackPayloadSerializer());
+        msgpackInstantModule.addDeserializer(PayloadImpl.class, new MsgpackPayloadDeserializer(this, msgPackConverter));
+
         msgpackObjectMapper.registerModule(msgpackInstantModule);
 
         jsonObjectMapper = new ObjectMapper();
         jsonObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        jsonObjectMapper.addMixIn(JobRecordImpl.class, StringPayloadMixin.class);
+        // jsonObjectMapper.addMixIn(JobRecordImpl.class, StringPayloadMixin.class);
 
         // serialize INSTANT as ISO-8601 String
         jsonObjectMapper.registerModule(new JavaTimeModule());
         jsonObjectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+
+        final SimpleModule stringPayloadModule = new SimpleModule();
+        stringPayloadModule.addSerializer(PayloadImpl.class, new StringPayloadSerializer());
+        stringPayloadModule.addDeserializer(PayloadImpl.class, new StringPayloadDeserializer(this, msgPackConverter));
+        jsonObjectMapper.registerModule(stringPayloadModule);
+
 
         this.injectableValues = new InjectableValues.Std();
 

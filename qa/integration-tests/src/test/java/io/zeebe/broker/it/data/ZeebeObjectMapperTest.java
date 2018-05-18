@@ -78,7 +78,7 @@ public class ZeebeObjectMapperTest
         // when
         clientRule.getJobClient()
             .newCompleteCommand(restoredJobEvent)
-            .payload("{\"foo\":\"baz\"}")
+            //.payload("{\"foo\":\"baz\"}")
             .send()
             .join();
 
