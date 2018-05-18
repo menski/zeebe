@@ -21,8 +21,7 @@ import java.util.Map;
 import io.zeebe.client.api.commands.CreateJobCommandStep1;
 import io.zeebe.client.api.commands.CreateJobCommandStep1.CreateJobCommandStep2;
 import io.zeebe.client.api.events.JobEvent;
-import io.zeebe.client.impl.CommandImpl;
-import io.zeebe.client.impl.RequestManager;
+import io.zeebe.client.impl.*;
 import io.zeebe.client.impl.command.JobCommandImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.record.RecordImpl;
@@ -33,11 +32,11 @@ public class CreateJobCommandImpl extends CommandImpl<JobEvent> implements Creat
 {
     private final JobCommandImpl command;
 
-    public CreateJobCommandImpl(RequestManager commandManager, MsgPackConverter converter, String topic)
+    public CreateJobCommandImpl(RequestManager commandManager, ZeebeObjectMapperImpl objectMapper, MsgPackConverter converter, String topic)
     {
         super(commandManager);
 
-        command = new JobCommandImpl(converter, JobIntent.CREATE);
+        command = new JobCommandImpl(objectMapper, converter, JobIntent.CREATE);
 
         command.setTopicName(topic);
         command.setRetries(CreateJobCommandStep1.DEFAULT_RETRIES);

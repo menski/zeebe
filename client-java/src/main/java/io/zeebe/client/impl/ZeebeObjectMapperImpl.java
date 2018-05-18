@@ -33,8 +33,7 @@ import io.zeebe.client.api.record.Record;
 import io.zeebe.client.api.record.ZeebeObjectMapper;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.event.JobEventImpl;
-import io.zeebe.client.impl.record.PayloadImpl;
-import io.zeebe.client.impl.record.RecordMetadataImpl;
+import io.zeebe.client.impl.record.*;
 import io.zeebe.protocol.Protocol;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
@@ -52,24 +51,9 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         RECORD_IMPL_CLASS_MAPPING.put(JobEvent.class, JobEventImpl.class);
     }
 
-    // don't use this for other thing - this is MAGIC!!!
-    abstract class StringPayloadMixin
+    abstract class MsgpackRecordMixin
     {
-        @JsonIgnore
-        abstract byte[] getPayloadMsgPack();
-
-        @JsonIgnore
-        abstract void setPayload(byte[] msgPack);
-    }
-
-    abstract class MsgpackPayloadMixin
-    {
-        @JsonIgnore
-        abstract String getPayload();
-
-        @JsonIgnore
-        abstract void setPayloadObject(JsonNode payload);
-
+        // records from broker does't have metadata inside (instead it's part of SBE layer)
         @JsonIgnore
         abstract RecordMetadataImpl getMetadata();
     }
@@ -226,18 +210,9 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         @Override
         public PayloadImpl deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException
         {
-
-            System.out.println("=== magic ===");
-            //final String json = p.getValueAsString();
-
             final TreeNode node = p.readValueAsTree();
-            // final String json = objectMapper.toJson(node);
             final String json = node.toString();
-
-
-
-            System.out.println("------");
-            System.out.println(json);
+            // objectMapper.toJson(node)
 
             final PayloadImpl payload = new PayloadImpl(objectMapper, msgPackConverter);
             payload.setJson(json);
@@ -253,21 +228,20 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
 
         msgpackObjectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         msgpackObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        //msgpackObjectMapper.addMixIn(JobRecordImpl.class, MsgpackPayloadMixin.class);
 
-        // serialize INSTANT as timestamp millis
-        final SimpleModule msgpackInstantModule = new SimpleModule();
-        msgpackInstantModule.addSerializer(Instant.class, new MsgpackInstantSerializer());
-        msgpackInstantModule.addDeserializer(Instant.class, new MsgpackInstantDeserializer());
+        msgpackObjectMapper.addMixIn(RecordImpl.class, MsgpackRecordMixin.class);
 
-        msgpackInstantModule.addSerializer(PayloadImpl.class, new MsgpackPayloadSerializer());
-        msgpackInstantModule.addDeserializer(PayloadImpl.class, new MsgpackPayloadDeserializer(this, msgPackConverter));
+        final SimpleModule msgpackModule = new SimpleModule();
+        msgpackModule.addSerializer(Instant.class, new MsgpackInstantSerializer());
+        msgpackModule.addDeserializer(Instant.class, new MsgpackInstantDeserializer());
 
-        msgpackObjectMapper.registerModule(msgpackInstantModule);
+        msgpackModule.addSerializer(PayloadImpl.class, new MsgpackPayloadSerializer());
+        msgpackModule.addDeserializer(PayloadImpl.class, new MsgpackPayloadDeserializer(this, msgPackConverter));
+
+        msgpackObjectMapper.registerModule(msgpackModule);
 
         jsonObjectMapper = new ObjectMapper();
         jsonObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        // jsonObjectMapper.addMixIn(JobRecordImpl.class, StringPayloadMixin.class);
 
         // serialize INSTANT as ISO-8601 String
         jsonObjectMapper.registerModule(new JavaTimeModule());

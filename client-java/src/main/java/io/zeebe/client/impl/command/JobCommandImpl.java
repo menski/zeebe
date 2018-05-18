@@ -20,6 +20,7 @@ import io.zeebe.client.api.commands.JobCommand;
 import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.record.JobRecordImpl;
+import io.zeebe.client.impl.record.PayloadImpl;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.intent.JobIntent;
 
@@ -27,14 +28,15 @@ public class JobCommandImpl extends JobRecordImpl implements JobCommand
 {
 
     @JsonCreator
-    public JobCommandImpl(@JacksonInject ZeebeObjectMapperImpl objectMapper, @JacksonInject MsgPackConverter converter)
+    public JobCommandImpl(@JacksonInject ZeebeObjectMapperImpl objectMapper)
     {
-        super(objectMapper, converter, RecordType.COMMAND);
+        super(objectMapper, RecordType.COMMAND);
     }
 
-    public JobCommandImpl(MsgPackConverter converter, JobIntent intent)
+    public JobCommandImpl(ZeebeObjectMapperImpl objectMapper, MsgPackConverter converter, JobIntent intent)
     {
-        super(null, converter, RecordType.COMMAND);
+        super(objectMapper, RecordType.COMMAND);
+        setPayloadField(new PayloadImpl(objectMapper, converter));
         setIntent(intent);
     }
 

@@ -15,19 +15,18 @@
  */
 package io.zeebe.client.impl.event;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.impl.ZeebeObjectMapperImpl;
-import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.record.JobRecordImpl;
 import io.zeebe.protocol.clientapi.RecordType;
 
 public class JobEventImpl extends JobRecordImpl implements JobEvent
 {
-    @JsonCreator
-    public JobEventImpl(@JacksonInject ZeebeObjectMapperImpl objectMapper, @JacksonInject MsgPackConverter converter)
+    public JobEventImpl(@JacksonInject ZeebeObjectMapperImpl objectMapper)
     {
-        super(objectMapper, converter, RecordType.EVENT);
+        super(objectMapper, RecordType.EVENT);
     }
 
     @JsonIgnore

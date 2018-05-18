@@ -20,11 +20,9 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.*;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.zeebe.client.api.record.JobRecord;
 import io.zeebe.client.impl.ZeebeObjectMapperImpl;
-import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.event.JobEventImpl;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
@@ -41,13 +39,9 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     private String type;
     private PayloadImpl payload;
 
-    private ZeebeObjectMapperImpl objectMapper;
-
-    public JobRecordImpl(ZeebeObjectMapperImpl objectMapper, MsgPackConverter msgPackConverter, RecordType recordType)
+    public JobRecordImpl(ZeebeObjectMapperImpl objectMapper, RecordType recordType)
     {
         super(objectMapper, recordType, ValueType.JOB);
-        this.objectMapper = objectMapper;
-        this.payload = new PayloadImpl(objectMapper, msgPackConverter); // new MsgPackField(msgPackConverter);
     }
 
     public JobRecordImpl(JobRecordImpl base, JobIntent intent)
@@ -60,7 +54,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
         this.lockOwner = base.lockOwner;
         this.retries = base.retries;
         this.type = base.type;
-        this.payload = new PayloadImpl(base.payload); // new MsgPackField(base.payload);
+        this.payload = new PayloadImpl(base.payload);
     }
 
     @Override
@@ -123,57 +117,36 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     }
 
     @JsonProperty("payload")
-    public void setPayload(PayloadImpl payload)
-    {
-        this.payload = payload;
-    }
-
-    @JsonProperty("payload")
-    public PayloadImpl getPayloadAs()
+    public PayloadImpl getPayloadField()
     {
         return payload;
     }
 
+    @JsonProperty("payload")
+    public void setPayloadField(PayloadImpl payload)
+    {
+        this.payload = payload;
+    }
+
     @Override
-    @JsonRawValue
-    @JsonIgnore
     public String getPayload()
     {
         return payload.getAsJsonString();
     }
 
-    @JsonIgnore
-    @JsonProperty("payload")
-    public byte[] getPayloadMsgPack()
+    public void setPayload(String jsonString)
     {
-        return payload.getMsgPack();
+        this.payload.setJson(jsonString);
     }
 
-    @JsonIgnore
-    @JsonProperty("payload")
-    public void setPayload(byte[] msgPack)
-    {
-        this.payload.setMsgPack(msgPack);
-    }
-
-    @JsonIgnore
-    public void setPayload(String json)
-    {
-        this.payload.setJson(json);
-    }
-
-    @JsonIgnore
     public void setPayload(InputStream jsonStream)
     {
         this.payload.setJson(jsonStream);
     }
 
-    @JsonIgnore
-    @JsonProperty("payload")
-    public void setPayloadObject(JsonNode payload)
+    public void clearPayload()
     {
-        final String json = objectMapper.toJson(payload);
-        setPayload(json);
+        this.payload.clear();
     }
 
     @Override

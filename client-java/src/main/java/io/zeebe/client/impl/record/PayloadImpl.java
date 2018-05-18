@@ -81,4 +81,12 @@ public class PayloadImpl
     {
         return msgPack;
     }
+
+    public void clear()
+    {
+        this.msgPack = null;
+        this.json = null;
+    }
+
+
 }
