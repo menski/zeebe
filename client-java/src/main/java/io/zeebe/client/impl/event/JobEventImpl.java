@@ -18,7 +18,7 @@ package io.zeebe.client.impl.event;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.zeebe.client.api.events.JobEvent;
-import io.zeebe.client.impl.ZeebeObjectMapperImpl;
+import io.zeebe.client.impl.data.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.record.JobRecordImpl;
 import io.zeebe.protocol.clientapi.RecordType;
 

@@ -17,7 +17,7 @@ package io.zeebe.client.impl.event;
 
 import com.fasterxml.jackson.annotation.*;
 import io.zeebe.client.api.events.WorkflowInstanceEvent;
-import io.zeebe.client.impl.ZeebeObjectMapperImpl;
+import io.zeebe.client.impl.data.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.record.WorkflowInstanceRecordImpl;
 import io.zeebe.protocol.clientapi.RecordType;
 

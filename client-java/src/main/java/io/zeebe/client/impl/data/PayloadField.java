@@ -2,26 +2,20 @@ package io.zeebe.client.impl.data;
 
 import java.io.InputStream;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.zeebe.client.impl.ZeebeObjectMapperImpl;
-
 public class PayloadField
 {
     private final MsgPackConverter msgPackConverter;
-    private final ZeebeObjectMapperImpl objectMapper;
 
     private String json;
     private byte[] msgPack;
 
-    public PayloadField(ZeebeObjectMapperImpl objectMapper, MsgPackConverter msgPackConverter)
+    public PayloadField(MsgPackConverter msgPackConverter)
     {
-        this.objectMapper = objectMapper;
         this.msgPackConverter = msgPackConverter;
     }
 
     public PayloadField(PayloadField other)
     {
-        this.objectMapper = other.objectMapper;
         this.msgPackConverter = other.msgPackConverter;
         this.msgPack = other.msgPack;
         this.json = other.json;
@@ -68,12 +62,6 @@ public class PayloadField
         {
             this.json = null;
         }
-    }
-
-    public void set(JsonNode node)
-    {
-        final String json = objectMapper.toJson(node);
-        setJson(json);
     }
 
     public byte[] getMsgPack()

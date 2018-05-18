@@ -17,8 +17,8 @@ package io.zeebe.client.impl.subscription;
 
 import static io.zeebe.util.VarDataUtil.readBytes;
 
-import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
+import io.zeebe.client.impl.data.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.record.GeneralRecordImpl;
 import io.zeebe.protocol.clientapi.*;
 import io.zeebe.protocol.intent.Intent;

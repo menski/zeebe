@@ -15,9 +15,7 @@
  */
 package io.zeebe.client.impl.record;
 
-import io.zeebe.client.impl.ZeebeObjectMapperImpl;
-import io.zeebe.client.impl.data.MsgPackConverter;
-import io.zeebe.client.impl.data.PayloadField;
+import io.zeebe.client.impl.data.*;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
 
@@ -34,7 +32,7 @@ public class GeneralRecordImpl extends RecordImpl
     {
         super(objectMapper, recordType, valueType);
 
-        this.content = new PayloadField(objectMapper, converter);
+        this.content = new PayloadField(converter);
         this.content.setMsgPack(rawContent);
     }
 

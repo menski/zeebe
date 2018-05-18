@@ -6,9 +6,7 @@ import java.util.Properties;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.api.record.ZeebeObjectMapper;
-import io.zeebe.client.impl.ZeebeObjectMapperImpl;
-import io.zeebe.client.impl.data.MsgPackConverter;
-import io.zeebe.client.impl.data.PayloadField;
+import io.zeebe.client.impl.data.*;
 import io.zeebe.client.impl.event.JobEventImpl;
 import io.zeebe.protocol.intent.JobIntent;
 import io.zeebe.test.broker.protocol.brokerapi.StubBrokerRule;
@@ -34,7 +32,7 @@ public class ZeebeObjectMapperTest
     public void shouldSerializeRecordToJson()
     {
         final JobEventImpl jobEvent = new JobEventImpl((ZeebeObjectMapperImpl) objectMapper);
-        jobEvent.setPayloadField(new PayloadField((ZeebeObjectMapperImpl) objectMapper, new MsgPackConverter()));
+        jobEvent.setPayloadField(new PayloadField(new MsgPackConverter()));
         jobEvent.setIntent(JobIntent.CREATED);
         jobEvent.setHeaders(Maps.newHashMap("defaultHeaderKey", "defaultHeaderVal"));
         jobEvent.setCustomHeaders(Maps.newHashMap("customHeaderKey", "customHeaderVal"));
@@ -57,7 +55,7 @@ public class ZeebeObjectMapperTest
     public void shouldDeserializeRecordFromJson()
     {
         final JobEventImpl jobEvent = new JobEventImpl((ZeebeObjectMapperImpl) objectMapper);
-        jobEvent.setPayloadField(new PayloadField((ZeebeObjectMapperImpl) objectMapper, new MsgPackConverter()));
+        jobEvent.setPayloadField(new PayloadField(new MsgPackConverter()));
         jobEvent.setIntent(JobIntent.CREATED);
         jobEvent.setHeaders(Maps.newHashMap("defaultHeaderKey", "defaultHeaderVal"));
         jobEvent.setCustomHeaders(Maps.newHashMap("customHeaderKey", "customHeaderVal"));

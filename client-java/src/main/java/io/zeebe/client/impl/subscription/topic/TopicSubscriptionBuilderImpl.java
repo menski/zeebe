@@ -25,8 +25,8 @@ import io.zeebe.client.api.subscription.TopicSubscriptionBuilderStep1.TopicSubsc
 import io.zeebe.client.api.subscription.TopicSubscriptionBuilderStep1.TopicSubscriptionBuilderStep3;
 import io.zeebe.client.cmd.ClientException;
 import io.zeebe.client.impl.TopicClientImpl;
-import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.command.*;
+import io.zeebe.client.impl.data.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.event.*;
 import io.zeebe.client.impl.record.GeneralRecordImpl;
 import io.zeebe.client.impl.record.RecordMetadataImpl;

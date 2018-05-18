@@ -33,7 +33,7 @@ public class Events
     public static JobEventImpl exampleJob()
     {
         final JobEventImpl baseEvent = new JobEventImpl(null);
-        baseEvent.setPayloadField(new PayloadField(null, new MsgPackConverter()));
+        baseEvent.setPayloadField(new PayloadField(new MsgPackConverter()));
         baseEvent.setIntent(JobIntent.CREATED);
         baseEvent.setHeaders(Maps.newHashMap("defaultHeaderKey", "defaultHeaderVal"));
         baseEvent.setCustomHeaders(Maps.newHashMap("customHeaderKey", "customHeaderVal"));
@@ -53,7 +53,7 @@ public class Events
     public static WorkflowInstanceEventImpl exampleWorfklowInstance()
     {
         final WorkflowInstanceEventImpl baseEvent = new WorkflowInstanceEventImpl(null);
-        baseEvent.setPayloadField(new PayloadField(null, new MsgPackConverter()));
+        baseEvent.setPayloadField(new PayloadField(new MsgPackConverter()));
         baseEvent.setIntent(WorkflowInstanceIntent.CREATED);
         baseEvent.setActivityId("some_activity");
         baseEvent.setBpmnProcessId("some_proceess");

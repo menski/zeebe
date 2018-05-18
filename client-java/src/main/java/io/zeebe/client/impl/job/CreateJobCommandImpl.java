@@ -24,6 +24,7 @@ import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.impl.*;
 import io.zeebe.client.impl.command.JobCommandImpl;
 import io.zeebe.client.impl.data.MsgPackConverter;
+import io.zeebe.client.impl.data.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.record.RecordImpl;
 import io.zeebe.protocol.intent.JobIntent;
 import io.zeebe.util.EnsureUtil;

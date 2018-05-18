@@ -15,6 +15,7 @@
  */
 package io.zeebe.client.impl;
 
+import io.zeebe.client.impl.data.ZeebeObjectMapperImpl;
 import io.zeebe.protocol.clientapi.*;
 import org.agrona.*;
 import org.agrona.io.DirectBufferInputStream;

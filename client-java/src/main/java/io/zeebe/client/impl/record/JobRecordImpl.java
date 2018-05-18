@@ -22,8 +22,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.zeebe.client.api.record.JobRecord;
-import io.zeebe.client.impl.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.data.PayloadField;
+import io.zeebe.client.impl.data.ZeebeObjectMapperImpl;
 import io.zeebe.client.impl.event.JobEventImpl;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
