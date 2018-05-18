@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.api.record.Record;
 import io.zeebe.client.api.record.ZeebeObjectMapper;
@@ -72,16 +73,16 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
     abstract class JobRecordMsgpackMixin extends MsgpackPayloadMixin
     {
         @JsonIgnore
-        abstract String getLockTimeAsString();
+        abstract String getLockExpirationTime();
 
         @JsonIgnore
-        abstract void setLockTime(String lockTime);
+        abstract void getLockExpirationTime(Instant lockTime);
     }
 
     abstract class JobRecordJsonMixin extends StringPayloadMixin
     {
         @JsonIgnore
-        abstract Instant getLockTime();
+        abstract long getLockTime();
 
         @JsonIgnore
         abstract void setLockTime(long lockTime);
@@ -102,6 +103,10 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         //jsonObjectMapper.addMixIn(JobRecordImpl.class, StringPayloadMixin.class);
         jsonObjectMapper.addMixIn(JobRecordImpl.class, JobRecordJsonMixin.class);
 
+        // serialize INSTANT as ISO-8601 String
+        jsonObjectMapper.registerModule(new JavaTimeModule());
+        jsonObjectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+
         this.injectableValues = new InjectableValues.Std();
 
         injectableValues.addValue(MsgPackConverter.class, msgPackConverter);
@@ -117,9 +122,6 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
     {
         try
         {
-            // TODO Use {@link #writeValueAsBytes(Object)} instead
-            // return objectMapper.writeValueAsString(record);
-            //return new String(objectMapper.writeValueAsBytes(record));
             return jsonObjectMapper.writeValueAsString(record);
         }
         catch (JsonProcessingException e)

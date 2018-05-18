@@ -20,7 +20,8 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.zeebe.client.api.record.JobRecord;
 import io.zeebe.client.impl.ZeebeObjectMapperImpl;
@@ -76,7 +77,7 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     }
 
     @Override
-    @JsonIgnore
+    @JsonProperty("lockTime")
     public Instant getLockExpirationTime()
     {
         if (lockTime == Protocol.INSTANT_NULL_VALUE)
@@ -90,6 +91,12 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     }
 
     @JsonProperty("lockTime")
+    public void getLockExpirationTime(Instant lockTime)
+    {
+        this.lockTime = lockTime.toEpochMilli();
+    }
+
+    @JsonProperty("lockTime")
     public long getLockTime()
     {
         return lockTime;
@@ -98,17 +105,6 @@ public abstract class JobRecordImpl extends RecordImpl implements JobRecord
     public void setLockTime(long lockTime)
     {
         this.lockTime = lockTime;
-    }
-
-    @JsonProperty("lockTime")
-    public String getLockTimeAsString()
-    {
-        return String.valueOf(getLockExpirationTime());
-    }
-
-    public void setLockTime(String lockTime)
-    {
-        this.lockTime = Instant.parse(lockTime).toEpochMilli();
     }
 
     @Override
