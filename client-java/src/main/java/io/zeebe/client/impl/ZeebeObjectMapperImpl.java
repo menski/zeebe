@@ -16,6 +16,7 @@
 package io.zeebe.client.impl;
 
 import java.io.*;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,6 +29,8 @@ import io.zeebe.client.api.record.Record;
 import io.zeebe.client.api.record.ZeebeObjectMapper;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.impl.event.JobEventImpl;
+import io.zeebe.client.impl.record.JobRecordImpl;
+import io.zeebe.client.impl.record.RecordMetadataImpl;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
@@ -44,6 +47,7 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
         RECORD_IMPL_CLASS_MAPPING.put(JobEvent.class, JobEventImpl.class);
     }
 
+    // don't use this for other thing - this is MAGIC!!!
     abstract class StringPayloadMixin
     {
         @JsonIgnore
@@ -57,6 +61,30 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
     {
         @JsonIgnore
         abstract String getPayload();
+
+        @JsonIgnore
+        abstract void setPayloadObject(JsonNode payload);
+
+        @JsonIgnore
+        abstract RecordMetadataImpl getMetadata();
+    }
+
+    abstract class JobRecordMsgpackMixin extends MsgpackPayloadMixin
+    {
+        @JsonIgnore
+        abstract String getLockTimeAsString();
+
+        @JsonIgnore
+        abstract void setLockTime(String lockTime);
+    }
+
+    abstract class JobRecordJsonMixin extends StringPayloadMixin
+    {
+        @JsonIgnore
+        abstract Instant getLockTime();
+
+        @JsonIgnore
+        abstract void setLockTime(long lockTime);
     }
 
     public ZeebeObjectMapperImpl(MsgPackConverter msgPackConverter)
@@ -65,12 +93,14 @@ public class ZeebeObjectMapperImpl implements ZeebeObjectMapper
 
         msgpackObjectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         msgpackObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        msgpackObjectMapper.addMixIn(JobEventImpl.class, MsgpackPayloadMixin.class);
+        //msgpackObjectMapper.addMixIn(JobRecordImpl.class, MsgpackPayloadMixin.class);
+        msgpackObjectMapper.addMixIn(JobRecordImpl.class, JobRecordMsgpackMixin.class);
 
         jsonObjectMapper = new ObjectMapper();
         //jsonObjectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         jsonObjectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        jsonObjectMapper.addMixIn(JobEventImpl.class, StringPayloadMixin.class);
+        //jsonObjectMapper.addMixIn(JobRecordImpl.class, StringPayloadMixin.class);
+        jsonObjectMapper.addMixIn(JobRecordImpl.class, JobRecordJsonMixin.class);
 
         this.injectableValues = new InjectableValues.Std();
 

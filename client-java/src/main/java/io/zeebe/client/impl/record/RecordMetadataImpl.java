@@ -15,9 +15,7 @@
  */
 package io.zeebe.client.impl.record;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
+import com.fasterxml.jackson.annotation.*;
 import io.zeebe.client.api.record.RecordMetadata;
 import io.zeebe.protocol.clientapi.ExecuteCommandRequestEncoder;
 import io.zeebe.protocol.intent.Intent;
@@ -31,6 +29,24 @@ public class RecordMetadataImpl implements RecordMetadata
     private io.zeebe.protocol.clientapi.RecordType recordType;
     private io.zeebe.protocol.clientapi.ValueType valueType;
     private Intent intent;
+
+    public RecordMetadataImpl()
+    {
+        // default constructor
+    }
+
+    @JsonCreator
+    public RecordMetadataImpl(
+            @JsonProperty("intent") String intent,
+            @JsonProperty("valueType") io.zeebe.protocol.clientapi.ValueType valueType,
+            @JsonProperty("recordType") io.zeebe.protocol.clientapi.RecordType recordType)
+    {
+        // is used by Jackson to de-serialize a JSON String
+        // resolve the intent from a given String and the value type
+        this.valueType = valueType;
+        this.recordType = recordType;
+        this.intent = Intent.fromProtocolValue(valueType, intent);
+    }
 
     @Override
     public String getTopicName()
@@ -115,7 +131,6 @@ public class RecordMetadataImpl implements RecordMetadata
         this.valueType = valueType;
     }
 
-    // TODO can't be de-serialized from String
     @Override
     public String getIntent()
     {
@@ -126,13 +141,6 @@ public class RecordMetadataImpl implements RecordMetadata
     public Intent getProtocolIntent()
     {
         return intent;
-    }
-
-
-    public void setIntentFromJackon(@JsonProperty("intent") String intent, @JsonProperty("valueType") io.zeebe.protocol.clientapi.ValueType valueType)
-    {
-        throw new RuntimeException("this has been called");
-//        this.intent = Intent.fromProtocolValue(valueType, intent);
     }
 
     public void setIntent(Intent intent)
