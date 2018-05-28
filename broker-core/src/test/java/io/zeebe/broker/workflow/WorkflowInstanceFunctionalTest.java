@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.zeebe.broker.RecordsWriter;
+import io.zeebe.protocol.intent.*;
 import org.assertj.core.util.Files;
 import org.junit.Before;
 import org.junit.Rule;
@@ -43,10 +45,6 @@ import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
 import io.zeebe.protocol.Protocol;
 import io.zeebe.protocol.clientapi.ValueType;
-import io.zeebe.protocol.intent.DeploymentIntent;
-import io.zeebe.protocol.intent.Intent;
-import io.zeebe.protocol.intent.JobIntent;
-import io.zeebe.protocol.intent.WorkflowInstanceIntent;
 import io.zeebe.test.broker.protocol.clientapi.ClientApiRule;
 import io.zeebe.test.broker.protocol.clientapi.ExecuteCommandResponse;
 import io.zeebe.test.broker.protocol.clientapi.SubscribedRecord;
@@ -522,6 +520,11 @@ public class WorkflowInstanceFunctionalTest
         final long workflowInstance2 = testClient.createWorkflowInstance("workflow", asMsgPack("foo", 8));
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.WORKFLOW_INSTANCE && r.intent() == WorkflowInstanceIntent.COMPLETED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldSetSourceRecordPositionCorrectOnJoinXor", events).write();
         receiveWorkflowInstanceEvent(workflowInstance2, WorkflowInstanceIntent.COMPLETED);
 
         sequenceFlows = testClient.receiveEvents()
@@ -598,6 +601,11 @@ public class WorkflowInstanceFunctionalTest
         testClient.createWorkflowInstance("workflow", MsgPackUtil.asMsgPack("foo", 4));
 
         // then
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.WORKFLOW_INSTANCE && r.intent() == WorkflowInstanceIntent.COMPLETED)
+            .collect(Collectors.toList());
+        new RecordsWriter("testWorkflowInstanceStatesWithExclusiveGateway", events).write();
+
         final List<SubscribedRecord> workflowEvents = testClient
                 .receiveRecords()
                 .ofTypeWorkflowInstance()

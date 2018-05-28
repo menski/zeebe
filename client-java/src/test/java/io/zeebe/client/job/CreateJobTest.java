@@ -15,13 +15,6 @@
  */
 package io.zeebe.client.job;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.entry;
-
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.commands.CreateJobCommandStep1;
 import io.zeebe.client.api.events.JobEvent;
@@ -35,11 +28,19 @@ import io.zeebe.protocol.intent.JobIntent;
 import io.zeebe.test.broker.protocol.brokerapi.ExecuteCommandRequest;
 import io.zeebe.test.broker.protocol.brokerapi.StubBrokerRule;
 import io.zeebe.test.util.MsgPackUtil;
-import io.zeebe.util.sched.testing.ActorSchedulerRule;
 import org.assertj.core.util.Maps;
-import org.junit.*;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 public class CreateJobTest
 {

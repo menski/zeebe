@@ -94,7 +94,6 @@ public class UpdatePayloadTest
         final WorkflowInstanceCommand updatePayload =
             eventRecorder.getSingleWorkflowInstanceCommand(WorkflowInstanceCommand.WorkflowInstanceCommandName.UPDATE_PAYLOAD);
 
-        
 //        assertThat(payloadUpdated.getSourceRecordPosition()).isEqualTo()
 
         clientRule.getSubscriptionClient()

@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.zeebe.broker.RecordsWriter;
 import org.agrona.MutableDirectBuffer;
 import org.junit.Before;
 import org.junit.Rule;
@@ -107,10 +108,14 @@ public class IncidentTest
         final long workflowInstanceKey = testClient.createWorkflowInstance("process");
 
         // then
+
         final SubscribedRecord failureEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_READY);
+        final SubscribedRecord createIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.CREATE);
         final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.CREATED);
 
+        assertThat(createIncidentCommand.sourceRecordPosition()).isEqualTo(failureEvent.position());
         assertThat(incidentEvent.key()).isGreaterThan(0);
+        assertThat(incidentEvent.sourceRecordPosition()).isEqualTo(createIncidentCommand.position());
         assertThat(incidentEvent.value())
             .containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
             .containsEntry("errorMessage", "No data found for query $.foo.")
@@ -135,9 +140,12 @@ public class IncidentTest
 
         // then
         final SubscribedRecord failureEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETING);
+        final SubscribedRecord createIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.CREATE);
         final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.CREATED);
 
+        assertThat(createIncidentCommand.sourceRecordPosition()).isEqualTo(failureEvent.position());
         assertThat(incidentEvent.key()).isGreaterThan(0);
+        assertThat(incidentEvent.sourceRecordPosition()).isEqualTo(createIncidentCommand.position());
         assertThat(incidentEvent.value())
             .containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
             .containsEntry("errorMessage", "No data found for query $.foo.")
@@ -164,11 +172,22 @@ public class IncidentTest
         updatePayload(workflowInstanceKey, failureEvent.key(), PAYLOAD);
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.INCIDENT && r.intent() == IncidentIntent.RESOLVED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldResolveIncidentForInputMappingFailure", events).write();
+
         final SubscribedRecord followUpEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_ACTIVATED);
         assertThat(followUpEvent.value()).containsEntry("payload", PAYLOAD);
 
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
         final SubscribedRecord incidentResolvedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
         assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(incidentResolvedEvent.sourceRecordPosition()).isEqualTo(followUpEvent.position());
         assertThat(incidentResolvedEvent.value())
             .containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
             .containsEntry("errorMessage", "No data found for query $.foo.")
@@ -199,8 +218,13 @@ public class IncidentTest
         final SubscribedRecord followUpEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETED);
         assertThat(followUpEvent.value()).containsEntry("payload", PAYLOAD);
 
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
         final SubscribedRecord incidentResolvedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
         assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(incidentResolvedEvent.sourceRecordPosition()).isEqualTo(followUpEvent.position());
         assertThat(incidentResolvedEvent.value())
             .containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
             .containsEntry("errorMessage", "No data found for query $.foo.")
@@ -254,14 +278,25 @@ public class IncidentTest
         updatePayload(workflowInstanceKey, failureEvent, "{'string':{'obj':'test'}}");
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.INCIDENT && r.intent() == IncidentIntent.RESOLVED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldResolveIncidentForInvalidResultOnInputMapping", events).write();
+
         final SubscribedRecord followUpEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_ACTIVATED);
 
         final byte[] result = (byte[]) followUpEvent.value()
                                                     .get(PROP_PAYLOAD);
         assertThat(MSGPACK_MAPPER.readTree(result)).isEqualTo(JSON_MAPPER.readTree("{'obj':'test'}"));
 
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
         final SubscribedRecord incidentResolvedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
         assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(incidentResolvedEvent.sourceRecordPosition()).isEqualTo(followUpEvent.position());
         assertThat(incidentResolvedEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
                                                  .containsEntry("errorMessage",
                                                                 "Processing failed, since mapping will result in a non map object (json object).")
@@ -287,12 +322,13 @@ public class IncidentTest
 
         // when
         testClient.completeJobOfType("external", MSGPACK_MAPPER.writeValueAsBytes(JSON_MAPPER.readTree("{'testAttr':'test'}")));
-        receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_ACTIVATED);
+        final SubscribedRecord completing = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETING);
 
         // then incident is created
         final SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.CREATE);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
+        assertThat(incidentEvent.sourceRecordPosition()).isEqualTo(completing.position());
         assertThat(incidentEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
                                          .containsEntry("errorMessage", "Processing failed, since mapping will result in a non map object (json object).");
     }
@@ -328,8 +364,13 @@ public class IncidentTest
                                                     .get(PROP_PAYLOAD);
         assertThat(MSGPACK_MAPPER.readTree(result)).isEqualTo(JSON_MAPPER.readTree("{'obj':'test'}"));
 
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
         final SubscribedRecord incidentResolvedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
         assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(incidentResolvedEvent.sourceRecordPosition()).isEqualTo(followUpEvent.position());
         assertThat(incidentResolvedEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
                                                  .containsEntry("errorMessage",
                                                                 "Processing failed, since mapping will result in a non map object (json object).")
@@ -355,11 +396,13 @@ public class IncidentTest
 
         // when
         testClient.completeJobOfType("external");
+        final SubscribedRecord completing = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETING);
 
         // then incident is created
         final SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.CREATE);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
+        assertThat(incidentEvent.sourceRecordPosition()).isEqualTo(completing.position());
         assertThat(incidentEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
                                          .containsEntry("errorMessage", "Could not apply output mappings: Task was completed without payload");
     }
@@ -394,8 +437,13 @@ public class IncidentTest
                                                     .get(PROP_PAYLOAD);
         assertThat(MSGPACK_MAPPER.readTree(result)).isEqualTo(JSON_MAPPER.readTree("{'obj':'test'}"));
 
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
         final SubscribedRecord incidentResolvedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
         assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(incidentResolvedEvent.sourceRecordPosition()).isEqualTo(followUpEvent.position());
         assertThat(incidentResolvedEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
                                                  .containsEntry("errorMessage",
                                                                 "Could not apply output mappings: Task was completed without payload")
@@ -420,11 +468,13 @@ public class IncidentTest
 
         // when
         testClient.completeJobOfType("external");
+        final SubscribedRecord completing = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETING);
 
         // then incident is created
         final SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.CREATE);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
+        assertThat(incidentEvent.sourceRecordPosition()).isEqualTo(completing.position());
         assertThat(incidentEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
                                          .containsEntry("errorMessage", "Could not apply output mappings: Task was completed without payload");
     }
@@ -452,14 +502,25 @@ public class IncidentTest
         updatePayload(workflowInstanceKey, failureEvent, "{'testAttr':{'obj':'test'}}");
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.INCIDENT && r.intent() == IncidentIntent.RESOLVED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldResolveIncidentForOutputMappingAndNoTaskCompletePayload", events).write();
+
         final SubscribedRecord followUpEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_COMPLETED);
 
         final byte[] result = (byte[]) followUpEvent.value()
                                                     .get(PROP_PAYLOAD);
         assertThat(MSGPACK_MAPPER.readTree(result)).isEqualTo(JSON_MAPPER.readTree("{'obj':'test'}"));
 
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
         final SubscribedRecord incidentResolvedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
         assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(incidentResolvedEvent.sourceRecordPosition()).isEqualTo(followUpEvent.position());
         assertThat(incidentResolvedEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
                                                  .containsEntry("errorMessage",
                                                                 "Could not apply output mappings: Task was completed without payload")
@@ -485,11 +546,13 @@ public class IncidentTest
 
         // when
         testClient.createWorkflowInstance("workflow", asMsgPack("foo", 12));
+        final SubscribedRecord activated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.GATEWAY_ACTIVATED);
 
         // then incident is created
         final SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.CREATE);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
+        assertThat(incidentEvent.sourceRecordPosition()).isEqualTo(activated.position());
         assertThat(incidentEvent.value()).containsEntry("errorType", ErrorType.CONDITION_ERROR.name())
                                          .containsEntry("errorMessage", "All conditions evaluated to false and no default flow is set.")
                                          .containsEntry("activityId", "xor");
@@ -510,11 +573,13 @@ public class IncidentTest
 
         // when
         testClient.createWorkflowInstance("workflow", asMsgPack("foo", "bar"));
+        final SubscribedRecord activated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.GATEWAY_ACTIVATED);
 
         // then incident is created
         final SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.CREATE);
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
+        assertThat(incidentEvent.sourceRecordPosition()).isEqualTo(activated.position());
         assertThat(incidentEvent.value()).containsEntry("errorType", ErrorType.CONDITION_ERROR.name())
                                          .containsEntry("errorMessage", "Cannot compare values of different types: STRING and INTEGER")
                                          .containsEntry("activityId", "xor");
@@ -537,7 +602,7 @@ public class IncidentTest
         final long workflowInstanceKey = testClient.createWorkflowInstance("workflow", asMsgPack("foo", "bar"));
 
         // then incident is created
-        receiveFirstIncidentEvent(IncidentIntent.CREATED);
+        final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.CREATED);
 
         final SubscribedRecord failureEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.GATEWAY_ACTIVATED);
 
@@ -557,6 +622,18 @@ public class IncidentTest
                 tuple(RecordType.EVENT, ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.GATEWAY_ACTIVATED),
                 tuple(RecordType.EVENT, ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.SEQUENCE_FLOW_TAKEN),
                 tuple(RecordType.EVENT, ValueType.INCIDENT, IncidentIntent.RESOLVED));
+
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
+        final List<SubscribedRecord> sequenceFlows = records
+            .stream()
+            .filter(rec -> rec.intent() == WorkflowInstanceIntent.SEQUENCE_FLOW_TAKEN)
+            .collect(Collectors.toList());
+        final SubscribedRecord incidentResolvedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
+        assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(incidentResolvedEvent.sourceRecordPosition()).isEqualTo(sequenceFlows.get(1).position());
 
         // SEQUENCE_FLOW_TAKEN triggers the rest of the process
         assertThat(records).extracting(r -> r.recordType(), r -> r.valueType(), r -> r.intent())
@@ -583,7 +660,7 @@ public class IncidentTest
         final long workflowInstanceKey = testClient.createWorkflowInstance("workflow", asMsgPack("foo", "bar"));
 
         // then incident is created
-        receiveFirstIncidentEvent(IncidentIntent.CREATED);
+        final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.CREATED);
 
         final SubscribedRecord failureEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.GATEWAY_ACTIVATED);
 
@@ -620,6 +697,18 @@ public class IncidentTest
                 tuple(RecordType.EVENT, ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.SEQUENCE_FLOW_TAKEN),
                 tuple(RecordType.EVENT, ValueType.INCIDENT, IncidentIntent.RESOLVED));
 
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
+        final SubscribedRecord followUpEvent = records
+            .stream()
+            .filter(rec -> rec.intent() == WorkflowInstanceIntent.SEQUENCE_FLOW_TAKEN)
+            .findFirst().get();
+        final SubscribedRecord incidentResolvedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
+        assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(incidentResolvedEvent.sourceRecordPosition()).isEqualTo(followUpEvent.position());
+
         // SEQUENCE_FLOW_TAKEN triggers the rest of the process
         assertThat(records).extracting(r -> r.recordType(), r -> r.valueType(), r -> r.intent())
             .containsSubsequence(
@@ -653,6 +742,12 @@ public class IncidentTest
         updatePayload(workflowInstanceKey, failureEvent.key(), asMsgPack("foo", 7).byteArray());
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.WORKFLOW_INSTANCE && r.intent() == WorkflowInstanceIntent.COMPLETED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldResolveIncidentForExclusiveGatewayWithoutMatchingCondition", events).write();
+
         receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
         receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.COMPLETED);
     }
@@ -680,8 +775,17 @@ public class IncidentTest
         updatePayload(workflowInstanceKey, failureEvent.key(), PAYLOAD);
 
         // then
+        final SubscribedRecord followUpEvent = testClient.receiveEvents()
+            .skipUntil(rec -> rec.intent() == IncidentIntent.CREATED)
+            .filter(rec -> rec.intent() == WorkflowInstanceIntent.ACTIVITY_READY).findAny().get();
+
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
         final SubscribedRecord resolveFailedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVE_FAILED);
         assertThat(resolveFailedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(resolveFailedEvent.sourceRecordPosition()).isEqualTo(followUpEvent.position());
         assertThat(resolveFailedEvent.value())
             .containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
             .containsEntry("errorMessage", "No data found for query $.bar.")
@@ -709,8 +813,22 @@ public class IncidentTest
         updatePayload(workflowInstanceKey, failureEvent.key(), PAYLOAD);
 
         // then
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.INCIDENT && r.intent() == IncidentIntent.RESOLVED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldResolveIncidentAfterPreviousResolvingFailed", events).write();
+
+        final SubscribedRecord followUpEvent = testClient.receiveEvents()
+            .skipUntil(rec -> rec.intent() == IncidentIntent.RESOLVE_FAILED)
+            .filter(rec -> rec.intent() == WorkflowInstanceIntent.ACTIVITY_ACTIVATED).findAny().get();
+
+        final SubscribedRecord payloadUpdated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.PAYLOAD_UPDATED);
+        final SubscribedRecord resolveIncidentCommand = receiveFirstIncidentCommand(IncidentIntent.RESOLVE);
+        assertThat(resolveIncidentCommand.sourceRecordPosition()).isEqualTo(payloadUpdated.position());
+
         final SubscribedRecord incidentResolvedEvent = receiveFirstIncidentEvent(IncidentIntent.RESOLVED);
         assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
+        assertThat(incidentResolvedEvent.sourceRecordPosition()).isEqualTo(followUpEvent.position());
         assertThat(incidentResolvedEvent.value())
             .containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
             .containsEntry("errorMessage", "No data found for query $.foo.")
@@ -757,9 +875,14 @@ public class IncidentTest
         cancelWorkflowInstance(workflowInstanceKey);
 
         // then
+        final SubscribedRecord activityTerminated = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_TERMINATED);
+        final SubscribedRecord deleteCommand = receiveFirstIncidentCommand(IncidentIntent.DELETE);
+        assertThat(deleteCommand.sourceRecordPosition()).isEqualTo(activityTerminated.position());
+
         final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.DELETED);
 
         assertThat(incidentEvent.key()).isEqualTo(incidentCreatedEvent.key());
+        assertThat(incidentEvent.sourceRecordPosition()).isEqualTo(deleteCommand.position());
         assertThat(incidentEvent.value())
             .containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
             .containsEntry("errorMessage", "No data found for query $.foo.")
@@ -791,6 +914,12 @@ public class IncidentTest
         cancelWorkflowInstance(workflowInstanceKey);
 
         // then
+
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.INCIDENT && r.intent() == IncidentIntent.DELETED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldProcessIncidentsAfterMultipleTerminations", events).write();
         final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(workflowInstanceKey, IncidentIntent.DELETED);
 
         assertThat(incidentEvent.key()).isEqualTo(incidentCreatedEvent.key());
@@ -845,6 +974,12 @@ public class IncidentTest
         updateJobRetries();
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.INCIDENT && r.intent() == IncidentIntent.DELETED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldDeleteIncidentIfJobRetriesIncreased", events).write();
+
         final SubscribedRecord jobEvent = receiveFirstJobEvent(JobIntent.FAILED);
         final SubscribedRecord activityEvent = receiveFirstWorkflowInstanceEvent(WorkflowInstanceIntent.ACTIVITY_ACTIVATED);
         SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.DELETE);
@@ -888,6 +1023,12 @@ public class IncidentTest
         cancelWorkflowInstance(workflowInstanceKey);
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.INCIDENT && r.intent() == IncidentIntent.DELETE)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldDeleteIncidentIfJobIsCanceled", events).write();
+
         final SubscribedRecord jobEvent = receiveFirstJobEvent(JobIntent.FAILED);
         SubscribedRecord incidentEvent = receiveFirstIncidentCommand(IncidentIntent.DELETE);
 
@@ -951,6 +1092,13 @@ public class IncidentTest
         updateJobRetries();
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.INCIDENT && r.intent() == IncidentIntent.DELETED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldDeleteStandaloneIncidentIfJobRetriesIncreased", events).write();
+
+
         final SubscribedRecord jobEvent = receiveFirstJobEvent(JobIntent.FAILED);
         final SubscribedRecord incidentEvent = receiveFirstIncidentEvent(IncidentIntent.DELETED);
 

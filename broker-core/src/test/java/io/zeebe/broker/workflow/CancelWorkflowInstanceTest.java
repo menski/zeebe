@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.zeebe.broker.RecordsWriter;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -130,6 +131,11 @@ public class CancelWorkflowInstanceTest
         final ExecuteCommandResponse response = cancelWorkflowInstance(workflowInstanceKey);
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.JOB && r.intent() == JobIntent.CANCELED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldCancelActivityInstance", events).write();
         assertThat(response.intent()).isEqualTo(WorkflowInstanceIntent.CANCELED);
 
         final SubscribedRecord activityTerminatedEvent = testClient
@@ -162,6 +168,12 @@ public class CancelWorkflowInstanceTest
         final ExecuteCommandResponse response = cancelWorkflowInstance(workflowInstanceKey);
 
         // then
+
+        final List<SubscribedRecord> events = testClient.receiveRecords()
+            .limit(r -> r.valueType() == ValueType.WORKFLOW_INSTANCE && r.intent() == WorkflowInstanceIntent.CANCELED)
+            .collect(Collectors.toList());
+        new RecordsWriter("shouldCancelJobForActivity", events).write();
+
         assertThat(response.intent()).isEqualTo(WorkflowInstanceIntent.CANCELED);
 
         final SubscribedRecord jobCanceledEvent = testClient

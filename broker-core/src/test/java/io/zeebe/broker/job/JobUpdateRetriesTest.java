@@ -129,7 +129,7 @@ public class JobUpdateRetriesTest
         event.put("type", JOB_TYPE);
 
         // when
-        final ExecuteCommandResponse response = client.updateJobRetries(0,123, event);
+        final ExecuteCommandResponse response = client.updateJobRetries(0, 123, event);
 
         // then
         assertThat(response.recordType()).isEqualTo(RecordType.COMMAND_REJECTION);

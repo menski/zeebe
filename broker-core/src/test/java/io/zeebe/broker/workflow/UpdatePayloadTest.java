@@ -170,7 +170,7 @@ public class UpdatePayloadTest
     public void shouldRejectUpdateForNonExistingWorkflowInstance() throws Exception
     {
         // when
-        final ExecuteCommandResponse response = updatePayload(-1,-1L, -1L, MSGPACK_PAYLOAD);
+        final ExecuteCommandResponse response = updatePayload(-1, -1L, -1L, MSGPACK_PAYLOAD);
 
         // then
         assertThat(response.recordType()).isEqualTo(RecordType.COMMAND_REJECTION);
