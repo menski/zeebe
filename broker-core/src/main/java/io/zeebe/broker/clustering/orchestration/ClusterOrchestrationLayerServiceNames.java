@@ -17,11 +17,11 @@
  */
 package io.zeebe.broker.clustering.orchestration;
 
+import io.zeebe.broker.clustering.base.partitions.Partition;
+import io.zeebe.broker.clustering.base.topology.PartitionInfo;
 import io.zeebe.broker.clustering.orchestration.id.IdGenerator;
 import io.zeebe.broker.clustering.orchestration.state.KnownTopics;
-import io.zeebe.broker.clustering.orchestration.topic.ReplicationFactorService;
-import io.zeebe.broker.clustering.orchestration.topic.RequestPartitionsMessageHandler;
-import io.zeebe.broker.clustering.orchestration.topic.TopicCreationService;
+import io.zeebe.broker.clustering.orchestration.topic.*;
 import io.zeebe.servicecontainer.ServiceName;
 
 public class ClusterOrchestrationLayerServiceNames
@@ -38,4 +38,13 @@ public class ClusterOrchestrationLayerServiceNames
     public static final ServiceName<IdGenerator> ID_GENERATOR_SERVICE_NAME = ServiceName.newServiceName("cluster.orchestration.idGenerator", IdGenerator.class);
     public static final ServiceName<NodeSelector> NODE_SELECTOR_SERVICE_NAME = ServiceName.newServiceName("cluster.orchestration.nodeSelector", NodeSelector.class);
 
+    public static final ServiceName<SnapshotReplicationInstallService> SNAPSHOT_REPLICATION_INSTALL_SERVICE_NAME = ServiceName.newServiceName("cluster.orchestration.snapshotReplication.install", SnapshotReplicationInstallService.class);
+    public static ServiceName<SnapshotReplicationService> snapshotReplicationService(final Partition partition)
+    {
+        final PartitionInfo info = partition.getInfo();
+        final String name = String.format("cluster.orchestration.snapshotReplication.%s-%s.replicate",
+                info.getTopicName(), info.getPartitionId());
+
+        return ServiceName.newServiceName(name, SnapshotReplicationService.class);
+    }
 }

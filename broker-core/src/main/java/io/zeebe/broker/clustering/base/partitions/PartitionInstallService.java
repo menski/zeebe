@@ -19,6 +19,7 @@ package io.zeebe.broker.clustering.base.partitions;
 
 import static io.zeebe.broker.clustering.base.ClusterBaseLayerServiceNames.*;
 import static io.zeebe.broker.logstreams.LogStreamServiceNames.snapshotStorageServiceName;
+import static io.zeebe.raft.RaftServiceNames.followerServiceName;
 import static io.zeebe.raft.RaftServiceNames.leaderInitialEventCommittedServiceName;
 import static io.zeebe.raft.RaftServiceNames.raftServiceName;
 
@@ -176,9 +177,17 @@ public class PartitionInstallService implements Service<Void>, RaftStateListener
     @Override
     public void onStateChange(Raft raft, RaftState raftState)
     {
-        if (raftState == RaftState.LEADER)
+        switch (raft.getState())
         {
-            installLeaderPartition(raft);
+            case LEADER:
+                installLeaderPartition(raft);
+                break;
+            case FOLLOWER:
+                installFollowerPartition(raft);
+                break;
+            case CANDIDATE:
+            default:
+                break;
         }
     }
 
@@ -209,6 +218,18 @@ public class PartitionInstallService implements Service<Void>, RaftStateListener
                 LOG.debug("Not installing partition service for {}. Replication factor not reached, got {}/{}.", partitionInfo, raftMemberSize, replicationFactor);
             }
         }
+    }
+
+    private void installFollowerPartition(Raft raft)
+    {
+        final Partition partition = new Partition(partitionInfo, RaftState.FOLLOWER);
+        final ServiceName<Partition> partitionServiceName = followerPartitionServiceName(raft.getName());
+
+        startContext.createService(partitionServiceName, partition)
+                .dependency(followerServiceName(raft.getName(), raft.getTerm()))
+                .dependency(logStreamServiceName, partition.getLogStreamInjector())
+                .group(isInternalSystemPartition ? FOLLOWER_PARTITION_SYSTEM_GROUP_NAME : FOLLOWER_PARTITION_GROUP_NAME)
+                .install();
     }
 
     public Injector<ClientTransport> getClientTransportInjector()

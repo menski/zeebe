@@ -23,6 +23,7 @@ import io.zeebe.broker.clustering.orchestration.id.IdGenerator;
 import io.zeebe.broker.clustering.orchestration.state.KnownTopics;
 import io.zeebe.broker.clustering.orchestration.topic.ReplicationFactorService;
 import io.zeebe.broker.clustering.orchestration.topic.RequestPartitionsMessageHandler;
+import io.zeebe.broker.clustering.orchestration.topic.SnapshotReplicationInstallService;
 import io.zeebe.broker.clustering.orchestration.topic.TopicCreationService;
 import io.zeebe.broker.transport.TransportServiceNames;
 import io.zeebe.broker.transport.controlmessage.ControlMessageHandlerManager;
@@ -31,6 +32,7 @@ import io.zeebe.transport.ServerOutput;
 import io.zeebe.transport.ServerTransport;
 import org.slf4j.Logger;
 
+import static io.zeebe.broker.clustering.base.ClusterBaseLayerServiceNames.FOLLOWER_PARTITION_GROUP_NAME;
 import static io.zeebe.broker.clustering.base.ClusterBaseLayerServiceNames.TOPOLOGY_MANAGER_SERVICE;
 import static io.zeebe.broker.clustering.orchestration.ClusterOrchestrationLayerServiceNames.*;
 import static io.zeebe.broker.logstreams.LogStreamServiceNames.STREAM_PROCESSOR_SERVICE_FACTORY;
@@ -112,6 +114,11 @@ public class ClusterOrchestrationInstallService implements Service<Void>
                         .dependency(TOPOLOGY_MANAGER_SERVICE, replicationFactorService.getTopologyManagerInjector())
                         .dependency(NODE_SELECTOR_SERVICE_NAME, replicationFactorService.getNodeOrchestratingServiceInjector())
                         .dependency(clientTransport(TransportServiceNames.MANAGEMENT_API_CLIENT_NAME), replicationFactorService.getManagementClientApiInjector())
+                        .install();
+
+        final SnapshotReplicationInstallService snapshotReplicationInstallService = new SnapshotReplicationInstallService();
+        compositeInstall.createService(SNAPSHOT_REPLICATION_INSTALL_SERVICE_NAME, snapshotReplicationInstallService)
+                        .groupReference(FOLLOWER_PARTITION_GROUP_NAME, snapshotReplicationInstallService.getFollowerPartitionsGroupReference())
                         .install();
 
         compositeInstall.createService(REQUEST_PARTITIONS_MESSAGE_HANDLER_SERVICE_NAME, requestPartitionsMessageHandler)
