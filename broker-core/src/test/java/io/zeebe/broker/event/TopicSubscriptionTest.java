@@ -26,7 +26,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import io.zeebe.util.sched.clock.ControlledActorClock;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,11 +36,13 @@ import io.zeebe.broker.test.EmbeddedBrokerRule;
 import io.zeebe.protocol.clientapi.ControlMessageType;
 import io.zeebe.protocol.clientapi.ErrorCode;
 import io.zeebe.protocol.clientapi.RecordType;
+import io.zeebe.protocol.clientapi.RejectionType;
 import io.zeebe.protocol.clientapi.SubscriptionType;
 import io.zeebe.protocol.clientapi.ValueType;
+import io.zeebe.protocol.intent.JobIntent;
 import io.zeebe.protocol.intent.SubscriberIntent;
 import io.zeebe.protocol.intent.SubscriptionIntent;
-import io.zeebe.protocol.intent.JobIntent;
+import io.zeebe.protocol.intent.WorkflowInstanceIntent;
 import io.zeebe.servicecontainer.ServiceName;
 import io.zeebe.test.broker.protocol.MsgPackHelper;
 import io.zeebe.test.broker.protocol.clientapi.ClientApiRule;
@@ -52,6 +53,7 @@ import io.zeebe.test.broker.protocol.clientapi.ExecuteCommandResponse;
 import io.zeebe.test.broker.protocol.clientapi.RawMessage;
 import io.zeebe.test.broker.protocol.clientapi.SubscribedRecord;
 import io.zeebe.test.util.TestUtil;
+import io.zeebe.util.sched.clock.ControlledActorClock;
 
 
 public class TopicSubscriptionTest
@@ -185,6 +187,37 @@ public class TopicSubscriptionTest
         assertThat(jobEvent.valueType()).isEqualTo(ValueType.JOB);
         assertThat(jobEvent.intent()).isEqualTo(JobIntent.CREATED);
         assertThat(jobEvent.timestamp()).isEqualTo(fixedClockEpoch);
+    }
+
+    @Test
+    public void shouldPushRejection()
+    {
+        // given
+        apiRule.createCmdRequest()
+            .type(ValueType.WORKFLOW_INSTANCE, WorkflowInstanceIntent.CREATE)
+            .command()
+                .put("bpmnProcessId", "does not exist")
+                .put("version", -1)
+                .done()
+            .sendAndAwait();
+
+        // when
+        apiRule
+            .openTopicSubscription("foo", 0)
+            .await();
+
+        // then
+        final SubscribedRecord rejection = apiRule.subscribedEvents()
+            .filter((e) -> e.valueType() == ValueType.WORKFLOW_INSTANCE)
+            .filter(e -> e.recordType() == RecordType.COMMAND_REJECTION)
+            .findFirst()
+            .get();
+
+        assertThat(rejection.recordType()).isEqualTo(RecordType.COMMAND_REJECTION);
+        assertThat(rejection.valueType()).isEqualTo(ValueType.WORKFLOW_INSTANCE);
+        assertThat(rejection.intent()).isEqualTo(WorkflowInstanceIntent.CREATE);
+        assertThat(rejection.rejectionType()).isEqualTo(RejectionType.BAD_VALUE);
+        assertThat(rejection.rejectionReason()).isEqualTo("Workflow is not deployed");
     }
 
     @Test
