@@ -35,6 +35,10 @@ public abstract class SbeBufferWriterReader<E extends MessageEncoderFlyweight, D
     protected abstract E getBodyEncoder();
     protected abstract D getBodyDecoder();
 
+    public void reset()
+    {
+    }
+
     @Override
     public int getLength()
     {
@@ -44,6 +48,7 @@ public abstract class SbeBufferWriterReader<E extends MessageEncoderFlyweight, D
     @Override
     public void wrap(DirectBuffer buffer, int offset, int length)
     {
+        reset();
         headerDecoder.wrap(buffer, offset);
         getBodyDecoder().wrap(buffer,
                 offset + headerDecoder.encodedLength(),

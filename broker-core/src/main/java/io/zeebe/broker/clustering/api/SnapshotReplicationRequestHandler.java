@@ -68,7 +68,6 @@ public class SnapshotReplicationRequestHandler
 
     BufferWriter handleListSnapshots(final DirectBuffer buffer, final int offset, final int length)
     {
-        listSnapshotsResponse.reset();
         listSnapshotsRequest.wrap(buffer, offset, length);
 
         final int partitionId = listSnapshotsRequest.getPartitionId();
@@ -95,7 +94,6 @@ public class SnapshotReplicationRequestHandler
 
     BufferWriter handleFetchSnapshotChunk(final DirectBuffer buffer, final int offset, final int length)
     {
-        fetchSnapshotChunkResponse.reset();
         fetchSnapshotChunkRequest.wrap(buffer, offset, length);
 
         final int partitionId = fetchSnapshotChunkRequest.getPartitionId();

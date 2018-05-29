@@ -180,13 +180,16 @@ public class PartitionInstallService implements Service<Void>, RaftStateListener
         switch (raft.getState())
         {
             case LEADER:
+                removeFollowerPartitionService(raft);
                 installLeaderPartition(raft);
                 break;
             case FOLLOWER:
+                LOG.debug("new raft state follower joined {}", partitionInfo);
                 installFollowerPartition(raft);
                 break;
             case CANDIDATE:
             default:
+                removeFollowerPartitionService(raft);
                 break;
         }
     }
@@ -225,11 +228,26 @@ public class PartitionInstallService implements Service<Void>, RaftStateListener
         final Partition partition = new Partition(partitionInfo, RaftState.FOLLOWER);
         final ServiceName<Partition> partitionServiceName = followerPartitionServiceName(raft.getName());
 
-        startContext.createService(partitionServiceName, partition)
-                .dependency(followerServiceName(raft.getName(), raft.getTerm()))
-                .dependency(logStreamServiceName, partition.getLogStreamInjector())
-                .group(isInternalSystemPartition ? FOLLOWER_PARTITION_SYSTEM_GROUP_NAME : FOLLOWER_PARTITION_GROUP_NAME)
-                .install();
+        if (!startContext.hasService(partitionServiceName))
+        {
+            LOG.debug("Installing follower partition service for {}", partitionInfo);
+            startContext.createService(partitionServiceName, partition)
+                    .dependency(followerServiceName(raft.getName(), raft.getTerm()))
+                    .dependency(logStreamServiceName, partition.getLogStreamInjector())
+                    .group(FOLLOWER_PARTITION_GROUP_NAME)
+                    .install();
+        }
+    }
+
+    private void removeFollowerPartitionService(Raft raft)
+    {
+        final ServiceName<Partition> partitionServiceName = followerPartitionServiceName(raft.getName());
+
+        if (startContext.hasService(partitionServiceName))
+        {
+            LOG.debug("Removing follower partition {}", partitionInfo);
+            startContext.removeService(partitionServiceName);
+        }
     }
 
     public Injector<ClientTransport> getClientTransportInjector()
