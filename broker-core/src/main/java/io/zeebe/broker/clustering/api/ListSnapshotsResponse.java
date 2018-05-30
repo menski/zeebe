@@ -28,14 +28,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import io.zeebe.broker.Loggers;
 import io.zeebe.broker.util.SbeBufferWriterReader;
 import io.zeebe.clustering.management.ListSnapshotsResponseDecoder;
 import io.zeebe.clustering.management.ListSnapshotsResponseEncoder;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
+import org.slf4j.Logger;
 
 public class ListSnapshotsResponse extends SbeBufferWriterReader<ListSnapshotsResponseEncoder, ListSnapshotsResponseDecoder>
 {
+    private static Logger LOG = Loggers.CLUSTERING_LOGGER;
     private final ListSnapshotsResponseDecoder bodyDecoder = new ListSnapshotsResponseDecoder();
     private final ListSnapshotsResponseEncoder bodyEncoder = new ListSnapshotsResponseEncoder();
 
@@ -75,7 +78,6 @@ public class ListSnapshotsResponse extends SbeBufferWriterReader<ListSnapshotsRe
     public void wrap(DirectBuffer buffer, int offset, int length)
     {
         super.wrap(buffer, offset, length);
-        snapshots.clear();
         bodyDecoder.snapshots().forEach((decoder) -> snapshots.add(new SnapshotMetadata(decoder)));
     }
 

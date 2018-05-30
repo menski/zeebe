@@ -184,7 +184,6 @@ public class PartitionInstallService implements Service<Void>, RaftStateListener
                 installLeaderPartition(raft);
                 break;
             case FOLLOWER:
-                LOG.debug("new raft state follower joined {}", partitionInfo);
                 installFollowerPartition(raft);
                 break;
             case CANDIDATE:
@@ -234,6 +233,7 @@ public class PartitionInstallService implements Service<Void>, RaftStateListener
             startContext.createService(partitionServiceName, partition)
                     .dependency(followerServiceName(raft.getName(), raft.getTerm()))
                     .dependency(logStreamServiceName, partition.getLogStreamInjector())
+                    .dependency(snapshotStorageServiceName, partition.getSnapshotStorageInjector())
                     .group(FOLLOWER_PARTITION_GROUP_NAME)
                     .install();
         }

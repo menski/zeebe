@@ -1,7 +1,7 @@
-package io.zeebe.broker.clustering.orchestration.topic;
+package io.zeebe.broker.clustering.base;
 
 import static io.zeebe.broker.clustering.base.ClusterBaseLayerServiceNames.TOPOLOGY_MANAGER_SERVICE;
-import static io.zeebe.broker.clustering.orchestration.ClusterOrchestrationLayerServiceNames.snapshotReplicationService;
+import static io.zeebe.broker.clustering.base.ClusterBaseLayerServiceNames.snapshotReplicationService;
 import static io.zeebe.broker.transport.TransportServiceNames.clientTransport;
 
 import io.zeebe.broker.Loggers;
@@ -23,13 +23,11 @@ public class SnapshotReplicationInstallService implements Service<SnapshotReplic
     @Override
     public void start(ServiceStartContext startContext)
     {
-        LOG.debug("starting SnapshotReplicationInstallService");
         this.startContext = startContext;
     }
 
     public void stop(ServiceStopContext stopContext)
     {
-        LOG.debug("stopping SnapshotReplicationInstallService");
     }
 
     @Override
@@ -40,9 +38,9 @@ public class SnapshotReplicationInstallService implements Service<SnapshotReplic
 
     private void onPartitionAdded(final ServiceName<Partition> partitionServiceName, final Partition partition)
     {
-        LOG.debug("Partition added {}", partition.getInfo());
         final SnapshotReplicationService service = new SnapshotReplicationService();
 
+        LOG.debug("Installing snapshot replication service for {}", partition.getInfo());
         startContext.createService(snapshotReplicationService(partition), service)
                 .dependency(partitionServiceName, service.getPartitionInjector())
                 .dependency(TOPOLOGY_MANAGER_SERVICE, service.getTopologyManagerInjector())

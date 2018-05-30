@@ -19,6 +19,7 @@ package io.zeebe.broker.clustering.base;
 
 import io.zeebe.broker.clustering.base.partitions.Partition;
 import io.zeebe.broker.clustering.base.raft.RaftPersistentConfigurationManager;
+import io.zeebe.broker.clustering.base.topology.PartitionInfo;
 import io.zeebe.broker.clustering.base.topology.TopologyManager;
 import io.zeebe.broker.clustering.base.topology.NodeInfo;
 import io.zeebe.gossip.Gossip;
@@ -74,4 +75,14 @@ public class ClusterBaseLayerServiceNames
     public static final ServiceName<Void> SYSTEM_PARTITION_BOOTSTRAP_REPLICATION_SERVICE_NAME = ServiceName.newServiceName("cluster.base.system.partition.bootstrap.replication", Void.class);
 
     public static final ServiceName<Void> DEFAULT_TOPICS_BOOTSTRAP_SERVICE_NAME = ServiceName.newServiceName("cluster.base.bootstrap.defaultTopics", Void.class);
+
+    public static final ServiceName<SnapshotReplicationInstallService> SNAPSHOT_REPLICATION_INSTALL_SERVICE_NAME = ServiceName.newServiceName("cluster.orchestration.snapshotReplication.install", SnapshotReplicationInstallService.class);
+    public static ServiceName<SnapshotReplicationService> snapshotReplicationService(final Partition partition)
+    {
+        final PartitionInfo info = partition.getInfo();
+        final String name = String.format("cluster.orchestration.snapshotReplication.%s-%s.replicate",
+                info.getTopicName(), info.getPartitionId());
+
+        return ServiceName.newServiceName(name, SnapshotReplicationService.class);
+    }
 }

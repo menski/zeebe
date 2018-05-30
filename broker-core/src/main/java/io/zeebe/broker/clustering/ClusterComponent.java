@@ -30,6 +30,7 @@ import io.zeebe.broker.clustering.base.gossip.GossipService;
 import io.zeebe.broker.clustering.base.raft.RaftPersistentConfigurationManagerService;
 import io.zeebe.broker.clustering.base.topology.TopologyManagerService;
 import io.zeebe.broker.clustering.orchestration.ClusterOrchestrationInstallService;
+import io.zeebe.broker.clustering.base.SnapshotReplicationInstallService;
 import io.zeebe.broker.system.Component;
 import io.zeebe.broker.system.SystemContext;
 import io.zeebe.broker.system.configuration.BrokerCfg;
@@ -78,6 +79,11 @@ public class ClusterComponent implements Component
             .dependency(RAFT_CONFIGURATION_MANAGER, managementApiRequestHandlerService.getRaftPersistentConfigurationManagerInjector())
             .groupReference(LEADER_PARTITION_GROUP_NAME, managementApiRequestHandlerService.getLeaderPartitionsGroupReference())
             .install();
+
+        final SnapshotReplicationInstallService snapshotReplicationInstallService = new SnapshotReplicationInstallService();
+        baseLayerInstall.createService(SNAPSHOT_REPLICATION_INSTALL_SERVICE_NAME, snapshotReplicationInstallService)
+                .groupReference(FOLLOWER_PARTITION_GROUP_NAME, snapshotReplicationInstallService.getFollowerPartitionsGroupReference())
+                .install();
 
         initGossip(baseLayerInstall, context);
         initRaft(baseLayerInstall, context);

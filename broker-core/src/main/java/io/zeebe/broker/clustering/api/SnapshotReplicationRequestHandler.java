@@ -68,7 +68,8 @@ public class SnapshotReplicationRequestHandler
 
     BufferWriter handleListSnapshots(final DirectBuffer buffer, final int offset, final int length)
     {
-        listSnapshotsRequest.wrap(buffer, offset, length);
+        listSnapshotsRequest.wrap(buffer);
+        listSnapshotsResponse.reset();
 
         final int partitionId = listSnapshotsRequest.getPartitionId();
         final Partition partition = trackedPartitions.get(partitionId);
@@ -83,10 +84,16 @@ public class SnapshotReplicationRequestHandler
         for (final ReadableSnapshot snapshot : snapshots)
         {
             FileUtil.closeSilently(snapshot.getData());
-            listSnapshotsResponse.addSnapshot(snapshot.getName(),
-                    snapshot.getPosition(),
-                    snapshot.getChecksum(),
-                    snapshot.getLength());
+            // TODO: in the future, have SnapshotSupport interface decide whether or not
+            // a snapshot is replicable.
+            if (!snapshot.getName().matches(".*blockIdx.*"))
+            {
+                listSnapshotsResponse.addSnapshot(
+                        snapshot.getName(),
+                        snapshot.getPosition(),
+                        snapshot.getChecksum(),
+                        snapshot.getLength());
+            }
         }
 
         return listSnapshotsResponse;
