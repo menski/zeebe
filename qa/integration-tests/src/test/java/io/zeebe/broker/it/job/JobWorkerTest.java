@@ -377,8 +377,8 @@ public class JobWorkerTest
         waitUntil(() -> jobHandler.getHandledJobs().size() == 1);
 
         // then
-        doRepeatedly(() -> brokerRule.getClock().addTime(Duration.ofMinutes(5)))
-            .until((v) -> jobHandler.getHandledJobs().size() == 2);
+        brokerRule.getClock().addTime(Duration.ofMinutes(6));
+        waitUntil(() -> jobHandler.getHandledJobs().size() == 2);
 
         final long jobKey = job.getKey();
         assertThat(jobHandler.getHandledJobs())
