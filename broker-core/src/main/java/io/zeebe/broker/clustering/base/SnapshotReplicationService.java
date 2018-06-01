@@ -2,6 +2,7 @@ package io.zeebe.broker.clustering.base;
 
 import java.time.Duration;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Queue;
 
 import io.zeebe.broker.Loggers;
@@ -12,7 +13,7 @@ import io.zeebe.broker.clustering.base.topology.ReadableTopology;
 import io.zeebe.broker.clustering.base.topology.TopologyManager;
 import io.zeebe.clustering.management.ErrorResponseDecoder;
 import io.zeebe.clustering.management.MessageHeaderDecoder;
-import io.zeebe.logstreams.spi.TemporarySnapshotWriter;
+import io.zeebe.logstreams.spi.SnapshotWriter;
 import io.zeebe.servicecontainer.Injector;
 import io.zeebe.servicecontainer.Service;
 import io.zeebe.servicecontainer.ServiceStartContext;
@@ -21,8 +22,10 @@ import io.zeebe.transport.ClientResponse;
 import io.zeebe.transport.ClientTransport;
 import io.zeebe.transport.RemoteAddress;
 import io.zeebe.transport.ServerTransportBuilder;
+import io.zeebe.util.StreamUtil;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.future.ActorFuture;
+import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.slf4j.Logger;
 
@@ -57,7 +60,7 @@ public class SnapshotReplicationService extends Actor implements Service<Snapsho
     private final Duration noLeaderRetryInterval = Duration.ofSeconds(5);
     private final Duration listErrorRetryInterval = Duration.ofSeconds(5);
 
-    private TemporarySnapshotWriter temporarySnapshotWriter;
+    private SnapshotWriter temporarySnapshotWriter;
     private ListSnapshotsResponse.SnapshotMetadata snapshotMetadata;
     private int chunkOffset;
 
@@ -210,7 +213,7 @@ public class SnapshotReplicationService extends Actor implements Service<Snapsho
             final DirectBuffer chunk = fetchSnapshotChunkResponse.getData();
             try
             {
-                temporarySnapshotWriter.write(chunk, 0, chunk.capacity());
+                StreamUtil.write(chunk, temporarySnapshotWriter.getOutputStream());
             }
             catch (final Exception ex)
             {
@@ -224,7 +227,17 @@ public class SnapshotReplicationService extends Actor implements Service<Snapsho
             {
                 try
                 {
-                    temporarySnapshotWriter.commit(snapshotMetadata.getChecksum());
+                    final byte[] writtenDigest = temporarySnapshotWriter.closeAndGetChecksum();
+                    if (Arrays.equals(writtenDigest, snapshotMetadata.getChecksum()))
+                    {
+                        temporarySnapshotWriter.commit();
+                    }
+                    else
+                    {
+                        LOG.error("Written snapshot has unexpected checksum: {} != {}",
+                                BitUtil.toHex(snapshotMetadata.getChecksum()), BitUtil.toHex(writtenDigest));
+                        temporarySnapshotWriter.abort();
+                    }
                 }
                 catch (final Exception ex)
                 {
