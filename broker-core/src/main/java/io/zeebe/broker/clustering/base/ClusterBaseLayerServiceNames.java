@@ -19,6 +19,8 @@ package io.zeebe.broker.clustering.base;
 
 import io.zeebe.broker.clustering.base.partitions.Partition;
 import io.zeebe.broker.clustering.base.raft.RaftPersistentConfigurationManager;
+import io.zeebe.broker.clustering.base.snapshots.SnapshotReplicationInstallService;
+import io.zeebe.broker.clustering.base.snapshots.SnapshotReplicationService;
 import io.zeebe.broker.clustering.base.topology.PartitionInfo;
 import io.zeebe.broker.clustering.base.topology.TopologyManager;
 import io.zeebe.broker.clustering.base.topology.NodeInfo;
@@ -68,7 +70,6 @@ public class ClusterBaseLayerServiceNames
 
 
     public static final ServiceName<Partition> LEADER_PARTITION_SYSTEM_GROUP_NAME = ServiceName.newServiceName("cluster.base.leaderGroup.system", Partition.class);
-    public static final ServiceName<Partition> FOLLOWER_PARTITION_SYSTEM_GROUP_NAME = ServiceName.newServiceName("cluster.base.followerGroup.system", Partition.class);
 
     public static final ServiceName<Void> SYSTEM_PARTITION_BOOTSTRAP_SERVICE_NAME = ServiceName.newServiceName("cluster.base.system.partition.bootstrap", Void.class);
     public static final ServiceName<Void> SYSTEM_PARTITION_BOOTSTRAP_EXPECTED_SERVICE_NAME = ServiceName.newServiceName("cluster.base.system.partition.bootstrap.expect", Void.class);

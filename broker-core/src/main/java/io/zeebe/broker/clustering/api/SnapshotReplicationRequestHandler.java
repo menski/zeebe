@@ -84,8 +84,7 @@ public class SnapshotReplicationRequestHandler
         for (final ReadableSnapshot snapshot : snapshots)
         {
             FileUtil.closeSilently(snapshot.getData());
-            // TODO: in the future, have SnapshotSupport interface decide whether or not
-            // a snapshot is replicable.
+            // TODO: who should decide whether a snapshot is replicable or not? the handler? the storage? the snapshot?
             if (!snapshot.getName().matches(".*blockIdx.*"))
             {
                 listSnapshotsResponse.addSnapshot(

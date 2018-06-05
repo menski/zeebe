@@ -30,7 +30,7 @@ import io.zeebe.broker.clustering.base.gossip.GossipService;
 import io.zeebe.broker.clustering.base.raft.RaftPersistentConfigurationManagerService;
 import io.zeebe.broker.clustering.base.topology.TopologyManagerService;
 import io.zeebe.broker.clustering.orchestration.ClusterOrchestrationInstallService;
-import io.zeebe.broker.clustering.base.SnapshotReplicationInstallService;
+import io.zeebe.broker.clustering.base.snapshots.SnapshotReplicationInstallService;
 import io.zeebe.broker.system.Component;
 import io.zeebe.broker.system.SystemContext;
 import io.zeebe.broker.system.configuration.BrokerCfg;
