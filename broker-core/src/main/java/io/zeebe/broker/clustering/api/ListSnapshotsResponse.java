@@ -27,13 +27,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import io.zeebe.broker.Loggers;
 import io.zeebe.broker.util.SbeBufferWriterReader;
 import io.zeebe.clustering.management.ListSnapshotsResponseDecoder;
 import io.zeebe.clustering.management.ListSnapshotsResponseEncoder;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
-import org.slf4j.Logger;
 
 public class ListSnapshotsResponse extends SbeBufferWriterReader<ListSnapshotsResponseEncoder, ListSnapshotsResponseDecoder>
 {
