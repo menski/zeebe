@@ -22,7 +22,6 @@ import static io.zeebe.clustering.management.ListSnapshotsResponseEncoder.Snapsh
 import static io.zeebe.clustering.management.ListSnapshotsResponseEncoder.SnapshotsEncoder.*;
 import static io.zeebe.util.StringUtil.getBytes;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +37,6 @@ import org.slf4j.Logger;
 
 public class ListSnapshotsResponse extends SbeBufferWriterReader<ListSnapshotsResponseEncoder, ListSnapshotsResponseDecoder>
 {
-    private static Logger LOG = Loggers.CLUSTERING_LOGGER;
     private final ListSnapshotsResponseDecoder bodyDecoder = new ListSnapshotsResponseDecoder();
     private final ListSnapshotsResponseEncoder bodyEncoder = new ListSnapshotsResponseEncoder();
 

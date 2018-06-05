@@ -2,7 +2,6 @@ package io.zeebe.broker.clustering.base;
 
 import java.time.Duration;
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Queue;
 
 import io.zeebe.broker.Loggers;
@@ -25,13 +24,13 @@ import io.zeebe.transport.ServerTransportBuilder;
 import io.zeebe.util.StreamUtil;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.future.ActorFuture;
-import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.slf4j.Logger;
 
 public class SnapshotReplicationService extends Actor implements Service<SnapshotReplicationService>
 {
     private static final Logger LOG = Loggers.CLUSTERING_LOGGER;
+    public static final String TEMPORARY_SNAPSHOT_FILE_NAME_PREFIX = "repl";
 
     private final Injector<ClientTransport> managementClientApiInjector = new Injector<>();
     private ClientTransport clientTransport;
@@ -128,7 +127,7 @@ public class SnapshotReplicationService extends Actor implements Service<Snapsho
     {
         final ActorFuture<ClientResponse> responseFuture = clientTransport.getOutput().sendRequest(leaderNodeAddress, listSnapshotsRequest);
 
-        LOG.debug("Polling snapshots from {}", leaderNodeAddress);
+        LOG.trace("Polling snapshots from {}", leaderNodeAddress);
         actor.runOnCompletion(responseFuture, (clientResponse, error) ->
         {
             if (error != null)
@@ -152,13 +151,13 @@ public class SnapshotReplicationService extends Actor implements Service<Snapsho
 
                 for (ListSnapshotsResponse.SnapshotMetadata metadata : listSnapshotsResponse.getSnapshots())
                 {
-                    if (!partition.getSnapshotStorage().contains(metadata.getName(), metadata.getLogPosition()))
+                    if (!partition.getSnapshotStorage().snapshotExists(metadata.getName(), metadata.getLogPosition()))
                     {
                         snapshotsToReplicate.add(metadata);
                     }
                 }
 
-                LOG.debug("Replicating {} snapshots", snapshotsToReplicate.size());
+                LOG.trace("Replicating {} snapshots", snapshotsToReplicate.size());
                 replicateNextSnapshot();
             }
         });
@@ -177,7 +176,8 @@ public class SnapshotReplicationService extends Actor implements Service<Snapsho
 
         try
         {
-            temporarySnapshotWriter = partition.getSnapshotStorage().createTemporarySnapshot(snapshotMetadata.getName(), snapshotMetadata.getLogPosition());
+            temporarySnapshotWriter = partition.getSnapshotStorage().createTemporarySnapshot(
+                    TEMPORARY_SNAPSHOT_FILE_NAME_PREFIX, snapshotMetadata.getName(), snapshotMetadata.getLogPosition());
         }
         catch (final Exception ex)
         {
@@ -191,7 +191,7 @@ public class SnapshotReplicationService extends Actor implements Service<Snapsho
 
     private void replicateSnapshot()
     {
-        ActorFuture<ClientResponse> awaitFetchChunk = clientTransport.getOutput().sendRequest(leaderNodeAddress, requestForNextChunk());
+        final ActorFuture<ClientResponse> awaitFetchChunk = clientTransport.getOutput().sendRequest(leaderNodeAddress, requestForNextChunk());
         actor.runOnCompletion(awaitFetchChunk, (clientResponse, error) ->
         {
             if (error != null)
@@ -227,23 +227,12 @@ public class SnapshotReplicationService extends Actor implements Service<Snapsho
             {
                 try
                 {
-                    final byte[] writtenDigest = temporarySnapshotWriter.closeAndGetChecksum();
-                    if (Arrays.equals(writtenDigest, snapshotMetadata.getChecksum()))
-                    {
-                        temporarySnapshotWriter.commit();
-                    }
-                    else
-                    {
-                        LOG.error("Written snapshot has unexpected checksum: {} != {}",
-                                BitUtil.toHex(snapshotMetadata.getChecksum()), BitUtil.toHex(writtenDigest));
-                        temporarySnapshotWriter.abort();
-                    }
+                    temporarySnapshotWriter.validateAndCommit(snapshotMetadata.getChecksum());
                 }
                 catch (final Exception ex)
                 {
                     LOG.error("Error committing temporary snapshot", ex);
                     abortCurrentSnapshotReplication();
-                    return;
                 }
 
                 replicateNextSnapshot();

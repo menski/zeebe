@@ -78,6 +78,7 @@ public class ClusterComponent implements Component
             .dependency(bufferingServerTransport(MANAGEMENT_API_SERVER_NAME), managementApiRequestHandlerService.getServerTransportInjector())
             .dependency(RAFT_CONFIGURATION_MANAGER, managementApiRequestHandlerService.getRaftPersistentConfigurationManagerInjector())
             .groupReference(LEADER_PARTITION_GROUP_NAME, managementApiRequestHandlerService.getLeaderPartitionsGroupReference())
+            .groupReference(LEADER_PARTITION_SYSTEM_GROUP_NAME, managementApiRequestHandlerService.getLeaderPartitionsGroupReference())
             .install();
 
         final SnapshotReplicationInstallService snapshotReplicationInstallService = new SnapshotReplicationInstallService();

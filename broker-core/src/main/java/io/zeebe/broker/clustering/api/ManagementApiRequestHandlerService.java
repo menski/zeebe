@@ -20,7 +20,6 @@ package io.zeebe.broker.clustering.api;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import io.zeebe.broker.Loggers;
 import io.zeebe.broker.clustering.base.partitions.Partition;
 import io.zeebe.broker.clustering.base.raft.RaftPersistentConfigurationManager;
 import io.zeebe.broker.system.configuration.BrokerCfg;
@@ -29,12 +28,9 @@ import io.zeebe.transport.BufferingServerTransport;
 import io.zeebe.transport.ServerInputSubscription;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.future.ActorFuture;
-import org.slf4j.Logger;
 
 public class ManagementApiRequestHandlerService extends Actor implements Service<Void>
 {
-    private static Logger LOG =Loggers.CLUSTERING_LOGGER;
-
     private final Injector<BufferingServerTransport> serverTransportInjector = new Injector<>();
     private final Injector<RaftPersistentConfigurationManager> raftPersistentConfigurationManagerInjector = new Injector<>();
 
