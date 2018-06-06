@@ -77,6 +77,11 @@ public class TestTopicClient
         return response.key();
     }
 
+    public ExecuteCommandResponse deployWithResponse(String topic, byte[] resource)
+    {
+        return deployWithResponse(topic, resource, "BPMN_XML", "process.bpmn");
+    }
+
     public ExecuteCommandResponse deployWithResponse(String topic, final WorkflowDefinition workflow)
     {
         final byte[] resource = Bpmn.convertToString(workflow).getBytes(UTF_8);

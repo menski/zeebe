@@ -362,7 +362,7 @@ public class IncidentTest
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
         assertThat(incidentEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
-                                         .containsEntry("errorMessage", "Could not apply output mappings: Task was completed without payload");
+                                         .containsEntry("errorMessage", "Could not apply output mappings: Job was completed without payload");
     }
 
     @Test
@@ -399,7 +399,7 @@ public class IncidentTest
         assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
         assertThat(incidentResolvedEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
                                                  .containsEntry("errorMessage",
-                                                                "Could not apply output mappings: Task was completed without payload")
+                                                                "Could not apply output mappings: Job was completed without payload")
                                                  .containsEntry("bpmnProcessId", "process")
                                                  .containsEntry("workflowInstanceKey", workflowInstanceKey)
                                                  .containsEntry("activityId", "service")
@@ -427,7 +427,7 @@ public class IncidentTest
 
         assertThat(incidentEvent.key()).isGreaterThan(0);
         assertThat(incidentEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
-                                         .containsEntry("errorMessage", "Could not apply output mappings: Task was completed without payload");
+                                         .containsEntry("errorMessage", "Could not apply output mappings: Job was completed without payload");
     }
 
     @Test
@@ -463,7 +463,7 @@ public class IncidentTest
         assertThat(incidentResolvedEvent.key()).isEqualTo(incidentEvent.key());
         assertThat(incidentResolvedEvent.value()).containsEntry("errorType", ErrorType.IO_MAPPING_ERROR.name())
                                                  .containsEntry("errorMessage",
-                                                                "Could not apply output mappings: Task was completed without payload")
+                                                                "Could not apply output mappings: Job was completed without payload")
                                                  .containsEntry("bpmnProcessId", "process")
                                                  .containsEntry("workflowInstanceKey", workflowInstanceKey)
                                                  .containsEntry("activityId", "service")

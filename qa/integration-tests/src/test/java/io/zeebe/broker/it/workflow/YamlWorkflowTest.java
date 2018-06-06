@@ -18,6 +18,7 @@ package io.zeebe.broker.it.workflow;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.zeebe.client.api.clients.WorkflowClient;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -139,13 +140,14 @@ public class YamlWorkflowTest
     public void shouldCompleteTaskWithPayload()
     {
         // given
-        clientRule.getWorkflowClient()
+        final WorkflowClient workflowClient = clientRule.getWorkflowClient();
+        workflowClient
             .newDeployCommand()
             .addResourceFromClasspath("workflows/workflow-with-mappings.yaml")
             .send()
             .join();
 
-        clientRule.getWorkflowClient()
+        workflowClient
             .newCreateInstanceCommand()
             .bpmnProcessId("workflow-mappings")
             .latestVersion()
@@ -174,7 +176,7 @@ public class YamlWorkflowTest
         waitUntil(() -> eventRecorder.hasWorkflowInstanceEvent(WorkflowInstanceState.ACTIVITY_COMPLETED));
 
         final WorkflowInstanceEvent workflowEvent = eventRecorder.getSingleWorkflowInstanceEvent(WorkflowInstanceState.ACTIVITY_COMPLETED);
-        assertThat(workflowEvent.getPayload()).isEqualTo("{\"result\":3}");
+        assertThat(workflowEvent.getPayload()).isEqualTo("{\"foo\":1,\"result\":3}");
     }
 
 }
