@@ -1,0 +1,5 @@
+status = [
+  "continuous-integration/jenkins/branch"
+]
+
+delete_merged_branches = true
