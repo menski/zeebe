@@ -15,70 +15,69 @@
  */
 package io.zeebe.workflow;
 
-import java.util.stream.Collectors;
-
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.clients.WorkflowClient;
 import io.zeebe.client.api.events.DeploymentEvent;
 import io.zeebe.client.cmd.ClientCommandRejectedException;
+import java.util.stream.Collectors;
 
-public class WorkflowInstanceStarter
-{
+public class WorkflowInstanceStarter {
 
-    public static void main(String[] args)
-    {
-        final String brokerContactPoint = "127.0.0.1:51015";
-        final String bpmnProcessId = "demoProcess";
-        final int partitionId = 0;
+  public static void main(String[] args) {
+    final String brokerContactPoint = "127.0.0.1:51015";
+    final String bpmnProcessId = "demoProcess";
+    final int partitionId = 0;
 
-        final ZeebeClient zeebeClient = ZeebeClient.newClientBuilder()
-            .brokerContactPoint(brokerContactPoint)
-            .build();
+    final ZeebeClient zeebeClient =
+        ZeebeClient.newClientBuilder().brokerContactPoint(brokerContactPoint).build();
 
-        final String topicName = zeebeClient.getConfiguration().getDefaultTopic();
+    final String topicName = zeebeClient.getConfiguration().getDefaultTopic();
 
-        System.out.println(String.format("> Connecting to %s", brokerContactPoint));
+    System.out.println(String.format("> Connecting to %s", brokerContactPoint));
 
-        System.out.println(String.format("> Deploying workflow to topic '%s' and partition '%d'", topicName, partitionId));
+    System.out.println(
+        String.format(
+            "> Deploying workflow to topic '%s' and partition '%d'", topicName, partitionId));
 
-        final WorkflowClient workflowClient = zeebeClient.topicClient(topicName).workflowClient();
+    final WorkflowClient workflowClient = zeebeClient.topicClient(topicName).workflowClient();
 
-        final DeploymentEvent deploymentResult = workflowClient
+    final DeploymentEvent deploymentResult =
+        workflowClient
             .newDeployCommand()
             .addResourceFromClasspath("demoProcess.bpmn")
             .send()
             .join();
 
-        try
-        {
-            final String deployedWorkflows = deploymentResult.getDeployedWorkflows().stream()
-                    .map(wf -> String.format("<%s:%d>", wf.getBpmnProcessId(), wf.getVersion()))
-                    .collect(Collectors.joining(","));
+    try {
+      final String deployedWorkflows =
+          deploymentResult
+              .getDeployedWorkflows()
+              .stream()
+              .map(wf -> String.format("<%s:%d>", wf.getBpmnProcessId(), wf.getVersion()))
+              .collect(Collectors.joining(","));
 
-            System.out.println(String.format("> Deployed: %s", deployedWorkflows));
+      System.out.println(String.format("> Deployed: %s", deployedWorkflows));
 
-            System.out.println(String.format("> Create workflow instance for workflow: %s", bpmnProcessId));
+      System.out.println(
+          String.format("> Create workflow instance for workflow: %s", bpmnProcessId));
 
-            workflowClient
-                .newCreateInstanceCommand()
-                .bpmnProcessId(bpmnProcessId)
-                .latestVersion()
-                .payload("{\"a\": \"b\"}")
-                .send()
-                .join();
+      workflowClient
+          .newCreateInstanceCommand()
+          .bpmnProcessId(bpmnProcessId)
+          .latestVersion()
+          .payload("{\"a\": \"b\"}")
+          .send()
+          .join();
 
-            System.out.println("> Created.");
-        }
-        catch (ClientCommandRejectedException exception)
-        {
-            System.out.println(String.format("> Fail to deploy: %s", exception.getMessage()));
-        }
-
-        System.out.println("> Closing...");
-
-        zeebeClient.close();
-
-        System.out.println("> Closed.");
+      System.out.println("> Created.");
+    } catch (ClientCommandRejectedException exception) {
+      System.out.println(String.format("> Fail to deploy: %s", exception.getMessage()));
     }
 
+    System.out.println("> Closing...");
+
+    zeebeClient.close();
+
+    System.out.println("> Closed.");
+  }
 }

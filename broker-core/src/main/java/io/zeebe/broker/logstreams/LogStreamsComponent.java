@@ -29,24 +29,33 @@ import io.zeebe.broker.system.SystemContext;
 import io.zeebe.broker.transport.TransportServiceNames;
 import io.zeebe.servicecontainer.ServiceContainer;
 
-public class LogStreamsComponent implements Component
-{
-    @Override
-    public void init(SystemContext context)
-    {
-        final ServiceContainer serviceContainer = context.getServiceContainer();
+public class LogStreamsComponent implements Component {
+  @Override
+  public void init(SystemContext context) {
+    final ServiceContainer serviceContainer = context.getServiceContainer();
 
-        final TopicSubscriptionService topicSubscriptionService = new TopicSubscriptionService(serviceContainer);
-        serviceContainer.createService(TopicSubscriptionServiceNames.TOPIC_SUBSCRIPTION_SERVICE, topicSubscriptionService)
-            .dependency(TransportServiceNames.serverTransport(TransportServiceNames.CLIENT_API_SERVER_NAME), topicSubscriptionService.getClientApiTransportInjector())
-            .dependency(LogStreamServiceNames.STREAM_PROCESSOR_SERVICE_FACTORY, topicSubscriptionService.getStreamProcessorServiceFactoryInjector())
-            .groupReference(LEADER_PARTITION_GROUP_NAME, topicSubscriptionService.getPartitionsGroupReference())
-            .groupReference(LEADER_PARTITION_SYSTEM_GROUP_NAME, topicSubscriptionService.getSystemPartitionGroupReference())
-            .install();
+    final TopicSubscriptionService topicSubscriptionService =
+        new TopicSubscriptionService(serviceContainer);
+    serviceContainer
+        .createService(
+            TopicSubscriptionServiceNames.TOPIC_SUBSCRIPTION_SERVICE, topicSubscriptionService)
+        .dependency(
+            TransportServiceNames.serverTransport(TransportServiceNames.CLIENT_API_SERVER_NAME),
+            topicSubscriptionService.getClientApiTransportInjector())
+        .dependency(
+            LogStreamServiceNames.STREAM_PROCESSOR_SERVICE_FACTORY,
+            topicSubscriptionService.getStreamProcessorServiceFactoryInjector())
+        .groupReference(
+            LEADER_PARTITION_GROUP_NAME, topicSubscriptionService.getPartitionsGroupReference())
+        .groupReference(
+            LEADER_PARTITION_SYSTEM_GROUP_NAME,
+            topicSubscriptionService.getSystemPartitionGroupReference())
+        .install();
 
-        final StreamProcessorServiceFactory streamProcessorFactory = new StreamProcessorServiceFactory(serviceContainer);
-        serviceContainer.createService(STREAM_PROCESSOR_SERVICE_FACTORY, streamProcessorFactory)
-            .install();
-    }
-
+    final StreamProcessorServiceFactory streamProcessorFactory =
+        new StreamProcessorServiceFactory(serviceContainer);
+    serviceContainer
+        .createService(STREAM_PROCESSOR_SERVICE_FACTORY, streamProcessorFactory)
+        .install();
+  }
 }

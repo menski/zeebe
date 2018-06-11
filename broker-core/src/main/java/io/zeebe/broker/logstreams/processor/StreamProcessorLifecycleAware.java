@@ -17,15 +17,9 @@
  */
 package io.zeebe.broker.logstreams.processor;
 
-public interface StreamProcessorLifecycleAware
-{
+public interface StreamProcessorLifecycleAware {
 
-    default void onOpen(TypedStreamProcessor streamProcessor)
-    {
+  default void onOpen(TypedStreamProcessor streamProcessor) {};
 
-    };
-
-    default void onClose()
-    {
-    };
+  default void onClose() {};
 }

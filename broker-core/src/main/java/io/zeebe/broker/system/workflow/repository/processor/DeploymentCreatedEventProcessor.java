@@ -28,39 +28,37 @@ import io.zeebe.msgpack.value.ValueArray;
 import io.zeebe.protocol.intent.DeploymentIntent;
 import io.zeebe.util.buffer.BufferUtil;
 
-public class DeploymentCreatedEventProcessor implements TypedRecordProcessor<DeploymentRecord>
-{
-    private WorkflowRepositoryIndex repositoryIndex;
+public class DeploymentCreatedEventProcessor implements TypedRecordProcessor<DeploymentRecord> {
+  private WorkflowRepositoryIndex repositoryIndex;
 
-    public DeploymentCreatedEventProcessor(WorkflowRepositoryIndex repositoryIndex)
-    {
-        this.repositoryIndex = repositoryIndex;
+  public DeploymentCreatedEventProcessor(WorkflowRepositoryIndex repositoryIndex) {
+    this.repositoryIndex = repositoryIndex;
+  }
+
+  @Override
+  public boolean executeSideEffects(
+      TypedRecord<DeploymentRecord> event, TypedResponseWriter responseWriter) {
+    return responseWriter.writeEvent(DeploymentIntent.CREATED, event);
+  }
+
+  @Override
+  public void updateState(TypedRecord<DeploymentRecord> event) {
+    final DeploymentRecord deploymentEvent = event.getValue();
+
+    final ValueArray<DeployedWorkflow> deployedWorkflows = deploymentEvent.deployedWorkflows();
+
+    final String topicName = BufferUtil.bufferAsString(deploymentEvent.getTopicName());
+
+    for (final DeployedWorkflow deployedWorkflow : deployedWorkflows) {
+      final WorkflowMetadata workflowMetadata =
+          new WorkflowMetadata()
+              .setKey(deployedWorkflow.getKey())
+              .setBpmnProcessId(BufferUtil.bufferAsString(deployedWorkflow.getBpmnProcessId()))
+              .setEventPosition(event.getPosition())
+              .setVersion(deployedWorkflow.getVersion())
+              .setTopicName(topicName);
+
+      repositoryIndex.add(workflowMetadata);
     }
-
-    @Override
-    public boolean executeSideEffects(TypedRecord<DeploymentRecord> event, TypedResponseWriter responseWriter)
-    {
-        return responseWriter.writeEvent(DeploymentIntent.CREATED, event);
-    }
-
-    @Override
-    public void updateState(TypedRecord<DeploymentRecord> event)
-    {
-        final DeploymentRecord deploymentEvent = event.getValue();
-
-        final ValueArray<DeployedWorkflow> deployedWorkflows = deploymentEvent.deployedWorkflows();
-
-        final String topicName = BufferUtil.bufferAsString(deploymentEvent.getTopicName());
-
-        for (final DeployedWorkflow deployedWorkflow : deployedWorkflows)
-        {
-            final WorkflowMetadata workflowMetadata = new WorkflowMetadata().setKey(deployedWorkflow.getKey())
-                    .setBpmnProcessId(BufferUtil.bufferAsString(deployedWorkflow.getBpmnProcessId()))
-                    .setEventPosition(event.getPosition())
-                    .setVersion(deployedWorkflow.getVersion())
-                    .setTopicName(topicName);
-
-            repositoryIndex.add(workflowMetadata);
-        }
-    }
+  }
 }

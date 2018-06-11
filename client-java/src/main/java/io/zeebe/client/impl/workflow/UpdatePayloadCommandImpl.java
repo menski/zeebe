@@ -15,8 +15,6 @@
  */
 package io.zeebe.client.impl.workflow;
 
-import java.io.InputStream;
-
 import io.zeebe.client.api.commands.UpdatePayloadWorkflowInstanceCommandStep1;
 import io.zeebe.client.api.commands.UpdatePayloadWorkflowInstanceCommandStep1.UpdatePayloadWorkflowInstanceCommandStep2;
 import io.zeebe.client.api.events.WorkflowInstanceEvent;
@@ -27,39 +25,38 @@ import io.zeebe.client.impl.event.WorkflowInstanceEventImpl;
 import io.zeebe.client.impl.record.RecordImpl;
 import io.zeebe.protocol.intent.WorkflowInstanceIntent;
 import io.zeebe.util.EnsureUtil;
+import java.io.InputStream;
 
 public class UpdatePayloadCommandImpl extends CommandImpl<WorkflowInstanceEvent>
-        implements UpdatePayloadWorkflowInstanceCommandStep1, UpdatePayloadWorkflowInstanceCommandStep2
-{
-    private final WorkflowInstanceCommandImpl command;
+    implements UpdatePayloadWorkflowInstanceCommandStep1,
+        UpdatePayloadWorkflowInstanceCommandStep2 {
+  private final WorkflowInstanceCommandImpl command;
 
-    public UpdatePayloadCommandImpl(final RequestManager commandManager, WorkflowInstanceEvent event)
-    {
-        super(commandManager);
+  public UpdatePayloadCommandImpl(
+      final RequestManager commandManager, WorkflowInstanceEvent event) {
+    super(commandManager);
 
-        EnsureUtil.ensureNotNull("base event", event);
+    EnsureUtil.ensureNotNull("base event", event);
 
-        command = new WorkflowInstanceCommandImpl((WorkflowInstanceEventImpl) event, WorkflowInstanceIntent.UPDATE_PAYLOAD);
-    }
+    command =
+        new WorkflowInstanceCommandImpl(
+            (WorkflowInstanceEventImpl) event, WorkflowInstanceIntent.UPDATE_PAYLOAD);
+  }
 
-    @Override
-    public UpdatePayloadWorkflowInstanceCommandStep2 payload(InputStream payload)
-    {
-        command.setPayload(payload);
-        return this;
-    }
+  @Override
+  public UpdatePayloadWorkflowInstanceCommandStep2 payload(InputStream payload) {
+    command.setPayload(payload);
+    return this;
+  }
 
-    @Override
-    public UpdatePayloadWorkflowInstanceCommandStep2 payload(String payload)
-    {
-        command.setPayload(payload);
-        return this;
-    }
+  @Override
+  public UpdatePayloadWorkflowInstanceCommandStep2 payload(String payload) {
+    command.setPayload(payload);
+    return this;
+  }
 
-    @Override
-    public RecordImpl getCommand()
-    {
-        return command;
-    }
-
+  @Override
+  public RecordImpl getCommand() {
+    return command;
+  }
 }

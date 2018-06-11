@@ -15,36 +15,41 @@
  */
 package io.zeebe.topic;
 
-import java.util.Properties;
-
 import io.zeebe.client.ClientProperties;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.events.TopicEvent;
+import java.util.Properties;
 
-public class CreateTopic
-{
+public class CreateTopic {
 
-    public static void main(final String[] args)
-    {
-        final String broker = "localhost:51015";
-        final String topic = "test";
-        final int partitions = 1;
+  public static void main(final String[] args) {
+    final String broker = "localhost:51015";
+    final String topic = "test";
+    final int partitions = 1;
 
-        final Properties clientProperties = new Properties();
-        clientProperties.put(ClientProperties.BROKER_CONTACTPOINT, broker);
+    final Properties clientProperties = new Properties();
+    clientProperties.put(ClientProperties.BROKER_CONTACTPOINT, broker);
 
-        try (ZeebeClient client = ZeebeClient.newClientBuilder().withProperties(clientProperties).build())
-        {
-            System.out.println("Creating topic " + topic + " with " + partitions + " partition(s) with contact point " + broker);
+    try (ZeebeClient client =
+        ZeebeClient.newClientBuilder().withProperties(clientProperties).build()) {
+      System.out.println(
+          "Creating topic "
+              + topic
+              + " with "
+              + partitions
+              + " partition(s) with contact point "
+              + broker);
 
-            final TopicEvent topicEvent = client.newCreateTopicCommand()
-                .name(topic)
-                .partitions(partitions)
-                .replicationFactor(1)
-                .send()
-                .join();
+      final TopicEvent topicEvent =
+          client
+              .newCreateTopicCommand()
+              .name(topic)
+              .partitions(partitions)
+              .replicationFactor(1)
+              .send()
+              .join();
 
-            System.out.println(topicEvent.getState());
-        }
+      System.out.println(topicEvent.getState());
     }
+  }
 }

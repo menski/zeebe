@@ -15,8 +15,6 @@
  */
 package io.zeebe.client.impl.record;
 
-import java.io.InputStream;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.zeebe.client.api.record.WorkflowInstanceRecord;
 import io.zeebe.client.impl.data.PayloadField;
@@ -25,146 +23,122 @@ import io.zeebe.client.impl.event.WorkflowInstanceEventImpl;
 import io.zeebe.protocol.clientapi.RecordType;
 import io.zeebe.protocol.clientapi.ValueType;
 import io.zeebe.protocol.intent.WorkflowInstanceIntent;
+import java.io.InputStream;
 
-public abstract class WorkflowInstanceRecordImpl extends RecordImpl implements WorkflowInstanceRecord
-{
-    private String bpmnProcessId;
-    private int version = -1;
-    private long workflowKey = -1L;
-    private long workflowInstanceKey = -1L;
-    private String activityId;
-    private PayloadField payload;
+public abstract class WorkflowInstanceRecordImpl extends RecordImpl
+    implements WorkflowInstanceRecord {
+  private String bpmnProcessId;
+  private int version = -1;
+  private long workflowKey = -1L;
+  private long workflowInstanceKey = -1L;
+  private String activityId;
+  private PayloadField payload;
 
-    public WorkflowInstanceRecordImpl(ZeebeObjectMapperImpl objectMapper, RecordType recordType)
-    {
-        super(objectMapper, recordType, ValueType.WORKFLOW_INSTANCE);
+  public WorkflowInstanceRecordImpl(ZeebeObjectMapperImpl objectMapper, RecordType recordType) {
+    super(objectMapper, recordType, ValueType.WORKFLOW_INSTANCE);
+  }
+
+  public WorkflowInstanceRecordImpl(
+      WorkflowInstanceRecordImpl base, WorkflowInstanceIntent intent) {
+    super(base, intent);
+
+    this.bpmnProcessId = base.getBpmnProcessId();
+    this.version = base.getVersion();
+    this.workflowKey = base.getWorkflowKey();
+    this.workflowInstanceKey = base.getWorkflowInstanceKey();
+    this.activityId = base.getActivityId();
+
+    if (base.payload != null) {
+      this.payload = new PayloadField(base.payload);
     }
+  }
 
-    public WorkflowInstanceRecordImpl(WorkflowInstanceRecordImpl base, WorkflowInstanceIntent intent)
-    {
-        super(base, intent);
+  @Override
+  public String getBpmnProcessId() {
+    return bpmnProcessId;
+  }
 
-        this.bpmnProcessId = base.getBpmnProcessId();
-        this.version = base.getVersion();
-        this.workflowKey = base.getWorkflowKey();
-        this.workflowInstanceKey = base.getWorkflowInstanceKey();
-        this.activityId = base.getActivityId();
+  public void setBpmnProcessId(String bpmnProcessId) {
+    this.bpmnProcessId = bpmnProcessId;
+  }
 
-        if (base.payload != null)
-        {
-            this.payload = new PayloadField(base.payload);
-        }
+  @Override
+  public int getVersion() {
+    return version;
+  }
+
+  public void setVersion(int version) {
+    this.version = version;
+  }
+
+  @Override
+  public long getWorkflowInstanceKey() {
+    return workflowInstanceKey;
+  }
+
+  public void setWorkflowInstanceKey(long workflowInstanceKey) {
+    this.workflowInstanceKey = workflowInstanceKey;
+  }
+
+  @Override
+  public String getActivityId() {
+    return activityId;
+  }
+
+  public void setActivityId(String activityId) {
+    this.activityId = activityId;
+  }
+
+  @JsonProperty("payload")
+  public PayloadField getPayloadField() {
+    return payload;
+  }
+
+  @JsonProperty("payload")
+  public void setPayloadField(PayloadField payload) {
+    this.payload = payload;
+  }
+
+  @Override
+  public String getPayload() {
+    if (payload == null) {
+      return null;
+    } else {
+      return payload.getAsJsonString();
     }
+  }
 
-    @Override
-    public String getBpmnProcessId()
-    {
-        return bpmnProcessId;
+  public void setPayload(String jsonString) {
+    if (payload == null) {
+      payload = new PayloadField(objectMapper.getMsgPackConverter());
     }
+    this.payload.setJson(jsonString);
+  }
 
-    public void setBpmnProcessId(String bpmnProcessId)
-    {
-        this.bpmnProcessId = bpmnProcessId;
+  public void setPayload(InputStream jsonStream) {
+    if (payload == null) {
+      payload = new PayloadField(objectMapper.getMsgPackConverter());
     }
+    this.payload.setJson(jsonStream);
+  }
 
-    @Override
-    public int getVersion()
-    {
-        return version;
-    }
+  public void clearPayload() {
+    // set field to null so that it is not serialized to Msgpack
+    // - currently, the broker doesn't support null as payload
+    payload = null;
+  }
 
-    public void setVersion(int version)
-    {
-        this.version = version;
-    }
+  @Override
+  public long getWorkflowKey() {
+    return workflowKey;
+  }
 
-    @Override
-    public long getWorkflowInstanceKey()
-    {
-        return workflowInstanceKey;
-    }
+  public void setWorkflowKey(long workflowKey) {
+    this.workflowKey = workflowKey;
+  }
 
-    public void setWorkflowInstanceKey(long workflowInstanceKey)
-    {
-        this.workflowInstanceKey = workflowInstanceKey;
-    }
-
-    @Override
-    public String getActivityId()
-    {
-        return activityId;
-    }
-
-    public void setActivityId(String activityId)
-    {
-        this.activityId = activityId;
-    }
-
-    @JsonProperty("payload")
-    public PayloadField getPayloadField()
-    {
-        return payload;
-    }
-
-    @JsonProperty("payload")
-    public void setPayloadField(PayloadField payload)
-    {
-        this.payload = payload;
-    }
-
-    @Override
-    public String getPayload()
-    {
-        if (payload == null)
-        {
-            return null;
-        }
-        else
-        {
-            return payload.getAsJsonString();
-        }
-    }
-
-    public void setPayload(String jsonString)
-    {
-        if (payload == null)
-        {
-            payload = new PayloadField(objectMapper.getMsgPackConverter());
-        }
-        this.payload.setJson(jsonString);
-    }
-
-    public void setPayload(InputStream jsonStream)
-    {
-        if (payload == null)
-        {
-            payload = new PayloadField(objectMapper.getMsgPackConverter());
-        }
-        this.payload.setJson(jsonStream);
-    }
-
-    public void clearPayload()
-    {
-        // set field to null so that it is not serialized to Msgpack
-        // - currently, the broker doesn't support null as payload
-        payload = null;
-    }
-
-    @Override
-    public long getWorkflowKey()
-    {
-        return workflowKey;
-    }
-
-    public void setWorkflowKey(long workflowKey)
-    {
-        this.workflowKey = workflowKey;
-    }
-
-    @Override
-    public Class<? extends RecordImpl> getEventClass()
-    {
-        return WorkflowInstanceEventImpl.class;
-    }
-
+  @Override
+  public Class<? extends RecordImpl> getEventClass() {
+    return WorkflowInstanceEventImpl.class;
+  }
 }

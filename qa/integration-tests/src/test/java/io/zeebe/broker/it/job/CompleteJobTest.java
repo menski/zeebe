@@ -15,66 +15,53 @@
  */
 package io.zeebe.broker.it.job;
 
-import java.util.Properties;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
-import org.junit.rules.Timeout;
-
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
 import io.zeebe.client.ClientProperties;
 import io.zeebe.client.api.clients.JobClient;
 import io.zeebe.client.api.events.JobEvent;
 import io.zeebe.client.cmd.ClientCommandRejectedException;
+import java.util.Properties;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.RuleChain;
+import org.junit.rules.Timeout;
 
-public class CompleteJobTest
-{
+public class CompleteJobTest {
 
-    public EmbeddedBrokerRule brokerRule = new EmbeddedBrokerRule();
+  public EmbeddedBrokerRule brokerRule = new EmbeddedBrokerRule();
 
-    public ClientRule clientRule = new ClientRule(() ->
-    {
-        final Properties p = new Properties();
-        p.setProperty(ClientProperties.REQUEST_TIMEOUT_SEC, "3");
-        return p;
-    });
+  public ClientRule clientRule =
+      new ClientRule(
+          () -> {
+            final Properties p = new Properties();
+            p.setProperty(ClientProperties.REQUEST_TIMEOUT_SEC, "3");
+            return p;
+          });
 
-    @Rule
-    public RuleChain ruleChain = RuleChain
-        .outerRule(brokerRule)
-        .around(clientRule);
+  @Rule public RuleChain ruleChain = RuleChain.outerRule(brokerRule).around(clientRule);
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
+  @Rule public ExpectedException thrown = ExpectedException.none();
 
-    @Rule
-    public Timeout testTimeout = Timeout.seconds(15);
+  @Rule public Timeout testTimeout = Timeout.seconds(15);
 
-    @Test
-    public void shouldProvideReasonInExceptionMessageOnRejection()
-    {
-        // given
-        final JobClient jobClient = clientRule.getClient().topicClient().jobClient();
+  @Test
+  public void shouldProvideReasonInExceptionMessageOnRejection() {
+    // given
+    final JobClient jobClient = clientRule.getClient().topicClient().jobClient();
 
-        final JobEvent job = jobClient.newCreateCommand()
-            .jobType("bar")
-            .payload("{}")
-            .send()
-            .join();
+    final JobEvent job = jobClient.newCreateCommand().jobType("bar").payload("{}").send().join();
 
-        // then
-        thrown.expect(ClientCommandRejectedException.class);
-        thrown.expectMessage("Command (COMPLETE) for event with key " +
-                job.getKey() +
-                " was rejected. It is not applicable in the current state. " +
-                "Job is not in state: ACTIVATED, TIMED_OUT");
+    // then
+    thrown.expect(ClientCommandRejectedException.class);
+    thrown.expectMessage(
+        "Command (COMPLETE) for event with key "
+            + job.getKey()
+            + " was rejected. It is not applicable in the current state. "
+            + "Job is not in state: ACTIVATED, TIMED_OUT");
 
-        // when
-        jobClient.newCompleteCommand(job)
-            .send()
-            .join();
-    }
+    // when
+    jobClient.newCompleteCommand(job).send().join();
+  }
 }

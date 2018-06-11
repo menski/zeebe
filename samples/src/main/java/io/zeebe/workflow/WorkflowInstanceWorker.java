@@ -15,74 +15,72 @@
  */
 package io.zeebe.workflow;
 
-import java.time.Duration;
-import java.util.Scanner;
-
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.clients.JobClient;
 import io.zeebe.client.api.subscription.JobWorker;
+import java.time.Duration;
+import java.util.Scanner;
 
-public class WorkflowInstanceWorker
-{
+public class WorkflowInstanceWorker {
 
-    public static void main(String[] args)
-    {
-        final String brokerContactPoint = "127.0.0.1:51015";
-        final int partitionId = 0;
-        final String taskType = "foo";
-        final String lockOwner = "worker-1";
+  public static void main(String[] args) {
+    final String brokerContactPoint = "127.0.0.1:51015";
+    final int partitionId = 0;
+    final String taskType = "foo";
+    final String lockOwner = "worker-1";
 
-        final ZeebeClient zeebeClient = ZeebeClient.newClientBuilder()
-            .brokerContactPoint(brokerContactPoint)
-            .build();
+    final ZeebeClient zeebeClient =
+        ZeebeClient.newClientBuilder().brokerContactPoint(brokerContactPoint).build();
 
-        final String topicName = zeebeClient.getConfiguration().getDefaultTopic();
+    final String topicName = zeebeClient.getConfiguration().getDefaultTopic();
 
-        System.out.println(String.format("> Connecting to %s", brokerContactPoint));
+    System.out.println(String.format("> Connecting to %s", brokerContactPoint));
 
-        System.out.println(String.format("> Open task subscription for topic '%s', partition '%d' and type '%s'", topicName, partitionId, taskType));
+    System.out.println(
+        String.format(
+            "> Open task subscription for topic '%s', partition '%d' and type '%s'",
+            topicName, partitionId, taskType));
 
-        final JobClient jobClient = zeebeClient.topicClient(topicName).jobClient();
+    final JobClient jobClient = zeebeClient.topicClient(topicName).jobClient();
 
-        final JobWorker workerRegistration = jobClient
+    final JobWorker workerRegistration =
+        jobClient
             .newWorker()
             .jobType(taskType)
-            .handler((client, job) ->
-            {
-                System.out.println(String.format(">>> [type: %s, key: %s, lockExpirationTime: %s]\n[headers: %s]\n[payload: %s]\n===",
-                        job.getType(),
-                        job.getMetadata().getKey(),
-                        job.getDeadline().toString(),
-                        job.getHeaders(),
-                        job.getPayload()));
+            .handler(
+                (client, job) -> {
+                  System.out.println(
+                      String.format(
+                          ">>> [type: %s, key: %s, lockExpirationTime: %s]\n[headers: %s]\n[payload: %s]\n===",
+                          job.getType(),
+                          job.getMetadata().getKey(),
+                          job.getDeadline().toString(),
+                          job.getHeaders(),
+                          job.getPayload()));
 
-                client.newCompleteCommand(job).withoutPayload().send().join();
-            })
+                  client.newCompleteCommand(job).withoutPayload().send().join();
+                })
             .name(lockOwner)
             .timeout(Duration.ofSeconds(10))
             .open();
 
-        System.out.println("> Opened.");
+    System.out.println("> Opened.");
 
-        // wait for tasks
-        try (Scanner scanner = new Scanner(System.in))
-        {
-            while (scanner.hasNextLine())
-            {
-                final String nextLine = scanner.nextLine();
-                if (nextLine.contains("exit"))
-                {
-                    System.out.println("> Closing...");
+    // wait for tasks
+    try (Scanner scanner = new Scanner(System.in)) {
+      while (scanner.hasNextLine()) {
+        final String nextLine = scanner.nextLine();
+        if (nextLine.contains("exit")) {
+          System.out.println("> Closing...");
 
-                    workerRegistration.close();
-                    zeebeClient.close();
+          workerRegistration.close();
+          zeebeClient.close();
 
-                    System.out.println("> Closed.");
+          System.out.println("> Closed.");
 
-                    System.exit(0);
-                }
-            }
+          System.exit(0);
         }
+      }
     }
-
+  }
 }

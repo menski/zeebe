@@ -15,71 +15,66 @@
  */
 package io.zeebe.topic;
 
-import java.util.Scanner;
-
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.clients.TopicClient;
 import io.zeebe.client.api.record.RecordMetadata;
 import io.zeebe.client.api.subscription.TopicSubscription;
+import java.util.Scanner;
 
-public class EventLogger
-{
+public class EventLogger {
 
-    public static void main(String[] args)
-    {
-        final String brokerContactPoint = "127.0.0.1:51015";
+  public static void main(String[] args) {
+    final String brokerContactPoint = "127.0.0.1:51015";
 
-        final ZeebeClient zeebeClient = ZeebeClient.newClientBuilder()
-                .brokerContactPoint(brokerContactPoint)
-                .build();
+    final ZeebeClient zeebeClient =
+        ZeebeClient.newClientBuilder().brokerContactPoint(brokerContactPoint).build();
 
-        System.out.println(String.format("> Connecting to %s", brokerContactPoint));
+    System.out.println(String.format("> Connecting to %s", brokerContactPoint));
 
-        final String topicName = zeebeClient.getConfiguration().getDefaultTopic();
+    final String topicName = zeebeClient.getConfiguration().getDefaultTopic();
 
-        System.out.println(String.format("> Open event subscription from topic '%s'", topicName));
+    System.out.println(String.format("> Open event subscription from topic '%s'", topicName));
 
-        final TopicClient topicClient = zeebeClient.topicClient(topicName);
+    final TopicClient topicClient = zeebeClient.topicClient(topicName);
 
-        final TopicSubscription subscription = topicClient
+    final TopicSubscription subscription =
+        topicClient
             .newSubscription()
             .name("logger")
-            .recordHandler(record ->
-            {
-                final RecordMetadata metadata = record.getMetadata();
-                System.out.println(String.format(">>> [topic: %d, position: %d, key: %d, type: %s, intent: %s]\n%s\n===",
-                        metadata.getPartitionId(),
-                        metadata.getPosition(),
-                        metadata.getKey(),
-                        metadata.getValueType(),
-                        metadata.getIntent(),
-                        record.toJson()));
-            })
+            .recordHandler(
+                record -> {
+                  final RecordMetadata metadata = record.getMetadata();
+                  System.out.println(
+                      String.format(
+                          ">>> [topic: %d, position: %d, key: %d, type: %s, intent: %s]\n%s\n===",
+                          metadata.getPartitionId(),
+                          metadata.getPosition(),
+                          metadata.getKey(),
+                          metadata.getValueType(),
+                          metadata.getIntent(),
+                          record.toJson()));
+                })
             .startAtHeadOfTopic()
             .forcedStart()
             .open();
 
-        System.out.println("> Opened.");
+    System.out.println("> Opened.");
 
-        // wait for events
-        try (Scanner scanner = new Scanner(System.in))
-        {
-            while (scanner.hasNextLine())
-            {
-                final String nextLine = scanner.nextLine();
-                if (nextLine.contains("exit"))
-                {
-                    System.out.println("> Closing...");
+    // wait for events
+    try (Scanner scanner = new Scanner(System.in)) {
+      while (scanner.hasNextLine()) {
+        final String nextLine = scanner.nextLine();
+        if (nextLine.contains("exit")) {
+          System.out.println("> Closing...");
 
-                    subscription.close();
-                    zeebeClient.close();
+          subscription.close();
+          zeebeClient.close();
 
-                    System.out.println("> Closed.");
+          System.out.println("> Closed.");
 
-                    System.exit(0);
-                }
-            }
+          System.exit(0);
         }
+      }
     }
-
+  }
 }

@@ -26,40 +26,41 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.sbe.MessageDecoderFlyweight;
 import org.agrona.sbe.MessageEncoderFlyweight;
 
-public abstract class SbeBufferWriterReader<E extends MessageEncoderFlyweight, D extends MessageDecoderFlyweight>
-        implements BufferWriter, BufferReader
-{
-    protected final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    protected final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+public abstract class SbeBufferWriterReader<
+        E extends MessageEncoderFlyweight, D extends MessageDecoderFlyweight>
+    implements BufferWriter, BufferReader {
+  protected final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+  protected final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
 
-    protected abstract E getBodyEncoder();
-    protected abstract D getBodyDecoder();
+  protected abstract E getBodyEncoder();
 
-    @Override
-    public int getLength()
-    {
-        return headerDecoder.encodedLength() + getBodyEncoder().sbeBlockLength();
-    }
+  protected abstract D getBodyDecoder();
 
-    @Override
-    public void wrap(DirectBuffer buffer, int offset, int length)
-    {
-        headerDecoder.wrap(buffer, offset);
-        getBodyDecoder().wrap(buffer,
-                offset + headerDecoder.encodedLength(),
-                headerDecoder.blockLength(),
-                headerDecoder.version());
-    }
+  @Override
+  public int getLength() {
+    return headerDecoder.encodedLength() + getBodyEncoder().sbeBlockLength();
+  }
 
-    @Override
-    public void write(MutableDirectBuffer buffer, int offset)
-    {
-        headerEncoder.wrap(buffer, offset)
-                .blockLength(getBodyEncoder().sbeBlockLength())
-                .templateId(getBodyEncoder().sbeTemplateId())
-                .schemaId(getBodyEncoder().sbeSchemaId())
-                .version(getBodyEncoder().sbeSchemaVersion());
+  @Override
+  public void wrap(DirectBuffer buffer, int offset, int length) {
+    headerDecoder.wrap(buffer, offset);
+    getBodyDecoder()
+        .wrap(
+            buffer,
+            offset + headerDecoder.encodedLength(),
+            headerDecoder.blockLength(),
+            headerDecoder.version());
+  }
 
-        getBodyEncoder().wrap(buffer, offset + headerEncoder.encodedLength());
-    }
+  @Override
+  public void write(MutableDirectBuffer buffer, int offset) {
+    headerEncoder
+        .wrap(buffer, offset)
+        .blockLength(getBodyEncoder().sbeBlockLength())
+        .templateId(getBodyEncoder().sbeTemplateId())
+        .schemaId(getBodyEncoder().sbeSchemaId())
+        .version(getBodyEncoder().sbeSchemaVersion());
+
+    getBodyEncoder().wrap(buffer, offset + headerEncoder.encodedLength());
+  }
 }

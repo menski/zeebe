@@ -15,70 +15,62 @@
  */
 package io.zeebe.topic;
 
-import java.util.Scanner;
-import java.util.function.Consumer;
-
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.clients.TopicClient;
 import io.zeebe.client.api.record.Record;
 import io.zeebe.client.api.subscription.TopicSubscription;
+import java.util.Scanner;
+import java.util.function.Consumer;
 
-public class TypedEventLogger
-{
+public class TypedEventLogger {
 
-    public static void main(String[] args)
-    {
-        final String brokerContactPoint = "127.0.0.1:51015";
+  public static void main(String[] args) {
+    final String brokerContactPoint = "127.0.0.1:51015";
 
-        final ZeebeClient zeebeClient = ZeebeClient.newClientBuilder()
-                .brokerContactPoint(brokerContactPoint)
-                .build();
+    final ZeebeClient zeebeClient =
+        ZeebeClient.newClientBuilder().brokerContactPoint(brokerContactPoint).build();
 
-        System.out.println(String.format("> Connecting to %s", brokerContactPoint));
+    System.out.println(String.format("> Connecting to %s", brokerContactPoint));
 
-        final String topicName = zeebeClient.getConfiguration().getDefaultTopic();
+    final String topicName = zeebeClient.getConfiguration().getDefaultTopic();
 
-        System.out.println(String.format("> Open event subscription from topic '%s'", topicName));
+    System.out.println(String.format("> Open event subscription from topic '%s'", topicName));
 
-        final Consumer<Record> logger = r ->
-        {
-            System.out.println(r.getMetadata());
-            System.out.println(r);
-            System.out.println();
+    final Consumer<Record> logger =
+        r -> {
+          System.out.println(r.getMetadata());
+          System.out.println(r);
+          System.out.println();
         };
 
-        final TopicClient topicClient = zeebeClient.topicClient(topicName);
+    final TopicClient topicClient = zeebeClient.topicClient(topicName);
 
-        final TopicSubscription subscription =
-            topicClient
-                .newSubscription()
-                .name("logger")
-                .workflowInstanceEventHandler(logger::accept)
-                .jobEventHandler(logger::accept)
-                .incidentEventHandler(logger::accept)
-                .startAtHeadOfTopic()
-                .forcedStart()
-                .open();
+    final TopicSubscription subscription =
+        topicClient
+            .newSubscription()
+            .name("logger")
+            .workflowInstanceEventHandler(logger::accept)
+            .jobEventHandler(logger::accept)
+            .incidentEventHandler(logger::accept)
+            .startAtHeadOfTopic()
+            .forcedStart()
+            .open();
 
-        // wait for events
-        try (Scanner scanner = new Scanner(System.in))
-        {
-            while (scanner.hasNextLine())
-            {
-                final String nextLine = scanner.nextLine();
-                if (nextLine.contains("exit"))
-                {
-                    System.out.println("> Closing...");
+    // wait for events
+    try (Scanner scanner = new Scanner(System.in)) {
+      while (scanner.hasNextLine()) {
+        final String nextLine = scanner.nextLine();
+        if (nextLine.contains("exit")) {
+          System.out.println("> Closing...");
 
-                    subscription.close();
-                    zeebeClient.close();
+          subscription.close();
+          zeebeClient.close();
 
-                    System.out.println("> Closed.");
+          System.out.println("> Closed.");
 
-                    System.exit(0);
-                }
-            }
+          System.exit(0);
         }
+      }
     }
-
+  }
 }

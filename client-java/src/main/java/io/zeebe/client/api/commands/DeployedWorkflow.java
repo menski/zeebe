@@ -15,11 +15,7 @@
  */
 package io.zeebe.client.api.commands;
 
-public interface DeployedWorkflow extends Workflow
-{
-    /**
-     * @return the name of the deployment resource which contains the workflow
-     */
-    String getResourceName();
-
+public interface DeployedWorkflow extends Workflow {
+  /** @return the name of the deployment resource which contains the workflow */
+  String getResourceName();
 }

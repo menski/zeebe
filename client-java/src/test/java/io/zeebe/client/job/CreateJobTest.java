@@ -18,18 +18,6 @@ package io.zeebe.client.job;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.HashMap;
-
-import org.assertj.core.util.Maps;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
-
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.commands.CreateJobCommandStep1;
 import io.zeebe.client.api.events.JobEvent;
@@ -45,54 +33,61 @@ import io.zeebe.test.broker.protocol.brokerapi.ExecuteCommandRequest;
 import io.zeebe.test.broker.protocol.brokerapi.StubBrokerRule;
 import io.zeebe.test.util.MsgPackUtil;
 import io.zeebe.util.sched.testing.ActorSchedulerRule;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.HashMap;
+import org.assertj.core.util.Maps;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.RuleChain;
 
-public class CreateJobTest
-{
+public class CreateJobTest {
 
-    public ActorSchedulerRule schedulerRule = new ActorSchedulerRule();
-    public ClientRule clientRule = new ClientRule();
-    public StubBrokerRule brokerRule = new StubBrokerRule();
+  public ActorSchedulerRule schedulerRule = new ActorSchedulerRule();
+  public ClientRule clientRule = new ClientRule();
+  public StubBrokerRule brokerRule = new StubBrokerRule();
 
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule(brokerRule).around(clientRule);
+  @Rule public RuleChain ruleChain = RuleChain.outerRule(brokerRule).around(clientRule);
 
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
+  @Rule public ExpectedException exception = ExpectedException.none();
 
-    protected ZeebeClient client;
+  protected ZeebeClient client;
 
-    protected final MsgPackConverter converter = new MsgPackConverter();
+  protected final MsgPackConverter converter = new MsgPackConverter();
 
+  @Before
+  public void setUp() {
+    this.client = clientRule.getClient();
+  }
 
-    @Before
-    public void setUp()
-    {
-        this.client = clientRule.getClient();
-    }
+  @Test
+  public void shouldCreateJob() {
+    // given
+    final Instant expectedTimestamp = Instant.now();
+    brokerRule
+        .onExecuteCommandRequest(ValueType.JOB, JobIntent.CREATE)
+        .respondWith()
+        .event()
+        .key(123)
+        .position(456)
+        .timestamp(expectedTimestamp)
+        .intent(JobIntent.CREATED)
+        .value()
+        .allOf((r) -> r.getCommand())
+        .put("deadline", Protocol.INSTANT_NULL_VALUE)
+        .put("worker", "")
+        .done()
+        .register();
 
-    @Test
-    public void shouldCreateJob()
-    {
-        // given
-        final Instant expectedTimestamp = Instant.now();
-        brokerRule.onExecuteCommandRequest(ValueType.JOB, JobIntent.CREATE)
-            .respondWith()
-            .event()
-            .key(123)
-            .position(456)
-            .timestamp(expectedTimestamp)
-            .intent(JobIntent.CREATED)
-            .value()
-              .allOf((r) -> r.getCommand())
-              .put("deadline", Protocol.INSTANT_NULL_VALUE)
-              .put("worker", "")
-              .done()
-            .register();
+    final String payload = "{\"foo\":\"bar\"}";
 
-        final String payload = "{\"foo\":\"bar\"}";
-
-        // when
-        final JobEvent job = clientRule.jobClient()
+    // when
+    final JobEvent job =
+        clientRule
+            .jobClient()
             .newCreateCommand()
             .jobType("fooType")
             .retries(3)
@@ -101,116 +96,110 @@ public class CreateJobTest
             .send()
             .join();
 
-        // then
-        final ExecuteCommandRequest request = brokerRule.getReceivedCommandRequests().get(0);
-        assertThat(request.valueType()).isEqualTo(ValueType.JOB);
-        assertThat(request.intent()).isEqualTo(JobIntent.CREATE);
-        assertThat(request.partitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
-        assertThat(request.position()).isEqualTo(ExecuteCommandRequestEncoder.positionNullValue());
+    // then
+    final ExecuteCommandRequest request = brokerRule.getReceivedCommandRequests().get(0);
+    assertThat(request.valueType()).isEqualTo(ValueType.JOB);
+    assertThat(request.intent()).isEqualTo(JobIntent.CREATE);
+    assertThat(request.partitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
+    assertThat(request.position()).isEqualTo(ExecuteCommandRequestEncoder.positionNullValue());
 
-        assertThat(request.getCommand()).containsOnly(
-                entry("retries", 3),
-                entry("type", "fooType"),
-                entry("headers", new HashMap<>()),
-                entry("customHeaders", Maps.newHashMap("beverage", "apple juice")),
-                entry("payload", converter.convertToMsgPack(payload)));
+    assertThat(request.getCommand())
+        .containsOnly(
+            entry("retries", 3),
+            entry("type", "fooType"),
+            entry("headers", new HashMap<>()),
+            entry("customHeaders", Maps.newHashMap("beverage", "apple juice")),
+            entry("payload", converter.convertToMsgPack(payload)));
 
-        assertThat(job.getKey()).isEqualTo(123L);
+    assertThat(job.getKey()).isEqualTo(123L);
 
-        final RecordMetadata metadata = job.getMetadata();
-        assertThat(metadata.getTopicName()).isEqualTo(StubBrokerRule.TEST_TOPIC_NAME);
-        assertThat(metadata.getPartitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
-        assertThat(metadata.getPosition()).isEqualTo(456);
-        assertThat(metadata.getTimestamp()).isEqualTo(expectedTimestamp);
-        assertThat(metadata.getRejectionType()).isEqualTo(null);
-        assertThat(metadata.getRejectionReason()).isEqualTo(null);
+    final RecordMetadata metadata = job.getMetadata();
+    assertThat(metadata.getTopicName()).isEqualTo(StubBrokerRule.TEST_TOPIC_NAME);
+    assertThat(metadata.getPartitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
+    assertThat(metadata.getPosition()).isEqualTo(456);
+    assertThat(metadata.getTimestamp()).isEqualTo(expectedTimestamp);
+    assertThat(metadata.getRejectionType()).isEqualTo(null);
+    assertThat(metadata.getRejectionReason()).isEqualTo(null);
 
-        assertThat(job.getState()).isEqualTo(JobState.CREATED);
-        assertThat(job.getHeaders()).isEmpty();
-        assertThat(job.getCustomHeaders()).containsOnly(entry("beverage", "apple juice"));
-        assertThat(job.getDeadline()).isNull();
-        assertThat(job.getWorker()).isEmpty();
-        assertThat(job.getRetries()).isEqualTo(3);
-        assertThat(job.getType()).isEqualTo("fooType");
-        assertThat(job.getPayload()).isEqualTo(payload);
-    }
+    assertThat(job.getState()).isEqualTo(JobState.CREATED);
+    assertThat(job.getHeaders()).isEmpty();
+    assertThat(job.getCustomHeaders()).containsOnly(entry("beverage", "apple juice"));
+    assertThat(job.getDeadline()).isNull();
+    assertThat(job.getWorker()).isEmpty();
+    assertThat(job.getRetries()).isEqualTo(3);
+    assertThat(job.getType()).isEqualTo("fooType");
+    assertThat(job.getPayload()).isEqualTo(payload);
+  }
 
-    @Test
-    public void shouldCreateJobWithDefaultValues()
-    {
-        // given
-        brokerRule.onExecuteCommandRequest(ValueType.JOB, JobIntent.CREATE)
-            .respondWith()
-            .event()
-            .key(123)
-            .intent(JobIntent.CREATED)
-            .value()
-              .allOf((r) -> r.getCommand())
-              .put("headers", new HashMap<>())
-              .put("payload", MsgPackUtil.encodeMsgPack(w -> w.packNil()).byteArray())
-              .done()
-            .register();
+  @Test
+  public void shouldCreateJobWithDefaultValues() {
+    // given
+    brokerRule
+        .onExecuteCommandRequest(ValueType.JOB, JobIntent.CREATE)
+        .respondWith()
+        .event()
+        .key(123)
+        .intent(JobIntent.CREATED)
+        .value()
+        .allOf((r) -> r.getCommand())
+        .put("headers", new HashMap<>())
+        .put("payload", MsgPackUtil.encodeMsgPack(w -> w.packNil()).byteArray())
+        .done()
+        .register();
 
-        // when
-        final JobEvent job = clientRule.jobClient()
-            .newCreateCommand()
-            .jobType("fooType")
-            .send()
-            .join();
+    // when
+    final JobEvent job = clientRule.jobClient().newCreateCommand().jobType("fooType").send().join();
 
-        // then
-        assertThat(job.getMetadata().getKey()).isEqualTo(123L);
-        assertThat(job.getMetadata().getTopicName()).isEqualTo(StubBrokerRule.TEST_TOPIC_NAME);
-        assertThat(job.getMetadata().getPartitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
+    // then
+    assertThat(job.getMetadata().getKey()).isEqualTo(123L);
+    assertThat(job.getMetadata().getTopicName()).isEqualTo(StubBrokerRule.TEST_TOPIC_NAME);
+    assertThat(job.getMetadata().getPartitionId()).isEqualTo(StubBrokerRule.TEST_PARTITION_ID);
 
-        assertThat(job.getRetries()).isEqualTo(CreateJobCommandStep1.DEFAULT_RETRIES);
-        assertThat(job.getHeaders()).isEmpty();
-        assertThat(job.getPayload()).isEqualTo("null");
-    }
+    assertThat(job.getRetries()).isEqualTo(CreateJobCommandStep1.DEFAULT_RETRIES);
+    assertThat(job.getHeaders()).isEmpty();
+    assertThat(job.getPayload()).isEqualTo("null");
+  }
 
-    @Test
-    public void shouldSetPayloadAsStream()
-    {
-        // given
-        brokerRule.onExecuteCommandRequest(ValueType.JOB, JobIntent.CREATE)
-            .respondWith()
-            .event()
-            .key(123)
-            .intent(JobIntent.CREATED)
-            .value()
-              .allOf((r) -> r.getCommand())
-              .put("deadline", Protocol.INSTANT_NULL_VALUE)
-              .put("worker", "")
-              .done()
-            .register();
+  @Test
+  public void shouldSetPayloadAsStream() {
+    // given
+    brokerRule
+        .onExecuteCommandRequest(ValueType.JOB, JobIntent.CREATE)
+        .respondWith()
+        .event()
+        .key(123)
+        .intent(JobIntent.CREATED)
+        .value()
+        .allOf((r) -> r.getCommand())
+        .put("deadline", Protocol.INSTANT_NULL_VALUE)
+        .put("worker", "")
+        .done()
+        .register();
 
-        final String payload = "{\"foo\":\"bar\"}";
+    final String payload = "{\"foo\":\"bar\"}";
 
-        // when
-        clientRule.jobClient()
-            .newCreateCommand()
-            .jobType("fooType")
-            .payload(new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)))
-            .send().join();
+    // when
+    clientRule
+        .jobClient()
+        .newCreateCommand()
+        .jobType("fooType")
+        .payload(new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)))
+        .send()
+        .join();
 
-        // then
-        final ExecuteCommandRequest request = brokerRule.getReceivedCommandRequests().get(0);
-        assertThat(request.getCommand()).contains(
-                entry("payload", converter.convertToMsgPack(payload)));
-    }
+    // then
+    final ExecuteCommandRequest request = brokerRule.getReceivedCommandRequests().get(0);
+    assertThat(request.getCommand())
+        .contains(entry("payload", converter.convertToMsgPack(payload)));
+  }
 
-    @Test
-    public void shouldValidateTypeNotNull()
-    {
-        // then
-        exception.expect(RuntimeException.class);
-        exception.expectMessage("type must not be null");
+  @Test
+  public void shouldValidateTypeNotNull() {
+    // then
+    exception.expect(RuntimeException.class);
+    exception.expectMessage("type must not be null");
 
-        // when
-        clientRule.jobClient()
-            .newCreateCommand()
-            .jobType(null)
-            .send();
-    }
-
+    // when
+    clientRule.jobClient().newCreateCommand().jobType(null).send();
+  }
 }

@@ -17,156 +17,171 @@
  */
 package io.zeebe.broker.logstreams.processor;
 
-public class StreamProcessorServiceTest
-{
-//
-//    @Rule
-//    public ExpectedException exception = ExpectedException.none();
-//
-//    @Rule
-//    public MockStreamProcessorController<TestEvent> mockController = new MockStreamProcessorController<>(
-//        TestEvent.class);
-//
-//    @Test
-//    public void shouldRegisterVersionFilter()
-//    {
-//        // given
-//        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo", 1, mock(StreamProcessor.class));
-//        injectMocks(streamProcessorService);
-//
-//        streamProcessorService.start(mock(ServiceStartContext.class));
-//
-//        final StreamProcessorController controller = streamProcessorService.getStreamProcessorController();
-//        final EventFilter eventFilter = controller.getEventFilter();
-//
-//        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
-//        { }, (m) -> m.protocolVersion(Integer.MAX_VALUE));
-//
-//        // then
-//        exception.expect(RuntimeException.class);
-//        exception.expectMessage("Cannot handle event with version newer than what is implemented by broker");
-//
-//        // when
-//        eventFilter.applies(event);
-//    }
-//
-//    @Test
-//    public void shouldRegisterCustomRejectingFilter()
-//    {
-//        // given
-//        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo", 1, mock(StreamProcessor.class));
-//        injectMocks(streamProcessorService);
-//        streamProcessorService.eventFilter((m) -> false);
-//
-//        streamProcessorService.start(mock(ServiceStartContext.class));
-//
-//        final StreamProcessorController controller = streamProcessorService.getStreamProcessorController();
-//        final EventFilter eventFilter = controller.getEventFilter();
-//
-//        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
-//        { });
-//
-//        // when/then
-//        assertThat(eventFilter.applies(event)).isFalse();
-//    }
-//
-//    @Test
-//    public void shouldRegisterCustomAcceptingFilter()
-//    {
-//        // given
-//        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo", 1, mock(StreamProcessor.class));
-//        injectMocks(streamProcessorService);
-//        streamProcessorService.eventFilter((m) -> true);
-//
-//        streamProcessorService.start(mock(ServiceStartContext.class));
-//
-//        final StreamProcessorController controller = streamProcessorService.getStreamProcessorController();
-//        final EventFilter eventFilter = controller.getEventFilter();
-//
-//        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
-//        { });
-//
-//        // when/then
-//        assertThat(eventFilter.applies(event)).isTrue();
-//    }
-//
-//    @Test
-//    public void shouldRegisterReprocessingVersionFilter()
-//    {
-//        // given
-//        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo", 1, mock(StreamProcessor.class));
-//        injectMocks(streamProcessorService);
-//
-//        streamProcessorService.start(mock(ServiceStartContext.class));
-//
-//        final StreamProcessorController controller = streamProcessorService.getStreamProcessorController();
-//        final EventFilter reprocessingEventFilter = controller.getReprocessingEventFilter();
-//
-//        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
-//        { }, (m) -> m.protocolVersion(Integer.MAX_VALUE));
-//
-//        // then
-//        exception.expect(RuntimeException.class);
-//        exception.expectMessage("Cannot handle event with version newer than what is implemented by broker");
-//
-//        // when
-//        reprocessingEventFilter.applies(event);
-//    }
-//
-//    @Test
-//    public void shouldRegisterCustomReprocessingAcceptingFilter()
-//    {
-//        // given
-//        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo", 1, mock(StreamProcessor.class));
-//        injectMocks(streamProcessorService);
-//        streamProcessorService.reprocessingEventFilter(e -> true);
-//
-//        streamProcessorService.start(mock(ServiceStartContext.class));
-//
-//        final StreamProcessorController controller = streamProcessorService.getStreamProcessorController();
-//        final EventFilter reprocessingEventFilter = controller.getReprocessingEventFilter();
-//
-//        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
-//        { });
-//
-//        // when/then
-//        assertThat(reprocessingEventFilter.applies(event)).isTrue();
-//    }
-//
-//    @Test
-//    public void shouldRegisterCustomReprocessingRejectingFilter()
-//    {
-//        // given
-//        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo", 1, mock(StreamProcessor.class));
-//        injectMocks(streamProcessorService);
-//        streamProcessorService.reprocessingEventFilter(e -> false);
-//
-//        streamProcessorService.start(mock(ServiceStartContext.class));
-//
-//        final StreamProcessorController controller = streamProcessorService.getStreamProcessorController();
-//        final EventFilter reprocessingEventFilter = controller.getReprocessingEventFilter();
-//
-//        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
-//        { });
-//
-//        // when/then
-//        assertThat(reprocessingEventFilter.applies(event)).isFalse();
-//    }
-//
-//    protected void injectMocks(StreamProcessorService streamProcessorService)
-//    {
-//        final ActorScheduler actorScheduler = mock(ActorScheduler.class);
-//        streamProcessorService.getActorSchedulerInjector().inject(actorScheduler);
-//
-//        final LogStream logStream = mock(LogStream.class);
-//        when(logStream.getTopicName()).thenReturn(BufferUtil.wrapString(ClientApiRule.DEFAULT_TOPIC_NAME));
-//        when(logStream.getPartitionId()).thenReturn(0);
-//        streamProcessorService.getLogStreamInjector().inject(logStream);
-//
-//        streamProcessorService.getSnapshotStorageInjector().inject(mock(SnapshotStorage.class));
-//    }
-//
-//    public static class TestEvent extends UnpackedObject
-//    {
-//    }
+public class StreamProcessorServiceTest {
+  //
+  //    @Rule
+  //    public ExpectedException exception = ExpectedException.none();
+  //
+  //    @Rule
+  //    public MockStreamProcessorController<TestEvent> mockController = new
+  // MockStreamProcessorController<>(
+  //        TestEvent.class);
+  //
+  //    @Test
+  //    public void shouldRegisterVersionFilter()
+  //    {
+  //        // given
+  //        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo",
+  // 1, mock(StreamProcessor.class));
+  //        injectMocks(streamProcessorService);
+  //
+  //        streamProcessorService.start(mock(ServiceStartContext.class));
+  //
+  //        final StreamProcessorController controller =
+  // streamProcessorService.getStreamProcessorController();
+  //        final EventFilter eventFilter = controller.getEventFilter();
+  //
+  //        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
+  //        { }, (m) -> m.protocolVersion(Integer.MAX_VALUE));
+  //
+  //        // then
+  //        exception.expect(RuntimeException.class);
+  //        exception.expectMessage("Cannot handle event with version newer than what is implemented
+  // by broker");
+  //
+  //        // when
+  //        eventFilter.applies(event);
+  //    }
+  //
+  //    @Test
+  //    public void shouldRegisterCustomRejectingFilter()
+  //    {
+  //        // given
+  //        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo",
+  // 1, mock(StreamProcessor.class));
+  //        injectMocks(streamProcessorService);
+  //        streamProcessorService.eventFilter((m) -> false);
+  //
+  //        streamProcessorService.start(mock(ServiceStartContext.class));
+  //
+  //        final StreamProcessorController controller =
+  // streamProcessorService.getStreamProcessorController();
+  //        final EventFilter eventFilter = controller.getEventFilter();
+  //
+  //        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
+  //        { });
+  //
+  //        // when/then
+  //        assertThat(eventFilter.applies(event)).isFalse();
+  //    }
+  //
+  //    @Test
+  //    public void shouldRegisterCustomAcceptingFilter()
+  //    {
+  //        // given
+  //        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo",
+  // 1, mock(StreamProcessor.class));
+  //        injectMocks(streamProcessorService);
+  //        streamProcessorService.eventFilter((m) -> true);
+  //
+  //        streamProcessorService.start(mock(ServiceStartContext.class));
+  //
+  //        final StreamProcessorController controller =
+  // streamProcessorService.getStreamProcessorController();
+  //        final EventFilter eventFilter = controller.getEventFilter();
+  //
+  //        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
+  //        { });
+  //
+  //        // when/then
+  //        assertThat(eventFilter.applies(event)).isTrue();
+  //    }
+  //
+  //    @Test
+  //    public void shouldRegisterReprocessingVersionFilter()
+  //    {
+  //        // given
+  //        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo",
+  // 1, mock(StreamProcessor.class));
+  //        injectMocks(streamProcessorService);
+  //
+  //        streamProcessorService.start(mock(ServiceStartContext.class));
+  //
+  //        final StreamProcessorController controller =
+  // streamProcessorService.getStreamProcessorController();
+  //        final EventFilter reprocessingEventFilter = controller.getReprocessingEventFilter();
+  //
+  //        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
+  //        { }, (m) -> m.protocolVersion(Integer.MAX_VALUE));
+  //
+  //        // then
+  //        exception.expect(RuntimeException.class);
+  //        exception.expectMessage("Cannot handle event with version newer than what is implemented
+  // by broker");
+  //
+  //        // when
+  //        reprocessingEventFilter.applies(event);
+  //    }
+  //
+  //    @Test
+  //    public void shouldRegisterCustomReprocessingAcceptingFilter()
+  //    {
+  //        // given
+  //        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo",
+  // 1, mock(StreamProcessor.class));
+  //        injectMocks(streamProcessorService);
+  //        streamProcessorService.reprocessingEventFilter(e -> true);
+  //
+  //        streamProcessorService.start(mock(ServiceStartContext.class));
+  //
+  //        final StreamProcessorController controller =
+  // streamProcessorService.getStreamProcessorController();
+  //        final EventFilter reprocessingEventFilter = controller.getReprocessingEventFilter();
+  //
+  //        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
+  //        { });
+  //
+  //        // when/then
+  //        assertThat(reprocessingEventFilter.applies(event)).isTrue();
+  //    }
+  //
+  //    @Test
+  //    public void shouldRegisterCustomReprocessingRejectingFilter()
+  //    {
+  //        // given
+  //        final StreamProcessorService streamProcessorService = new StreamProcessorService("foo",
+  // 1, mock(StreamProcessor.class));
+  //        injectMocks(streamProcessorService);
+  //        streamProcessorService.reprocessingEventFilter(e -> false);
+  //
+  //        streamProcessorService.start(mock(ServiceStartContext.class));
+  //
+  //        final StreamProcessorController controller =
+  // streamProcessorService.getStreamProcessorController();
+  //        final EventFilter reprocessingEventFilter = controller.getReprocessingEventFilter();
+  //
+  //        final LoggedEvent event = mockController.buildLoggedEvent(1L, (e) ->
+  //        { });
+  //
+  //        // when/then
+  //        assertThat(reprocessingEventFilter.applies(event)).isFalse();
+  //    }
+  //
+  //    protected void injectMocks(StreamProcessorService streamProcessorService)
+  //    {
+  //        final ActorScheduler actorScheduler = mock(ActorScheduler.class);
+  //        streamProcessorService.getActorSchedulerInjector().inject(actorScheduler);
+  //
+  //        final LogStream logStream = mock(LogStream.class);
+  //
+  // when(logStream.getTopicName()).thenReturn(BufferUtil.wrapString(ClientApiRule.DEFAULT_TOPIC_NAME));
+  //        when(logStream.getPartitionId()).thenReturn(0);
+  //        streamProcessorService.getLogStreamInjector().inject(logStream);
+  //
+  //        streamProcessorService.getSnapshotStorageInjector().inject(mock(SnapshotStorage.class));
+  //    }
+  //
+  //    public static class TestEvent extends UnpackedObject
+  //    {
+  //    }
 }

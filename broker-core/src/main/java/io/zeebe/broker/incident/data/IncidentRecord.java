@@ -17,9 +17,6 @@
  */
 package io.zeebe.broker.incident.data;
 
-import org.agrona.DirectBuffer;
-import org.agrona.concurrent.UnsafeBuffer;
-
 import io.zeebe.broker.logstreams.processor.TypedRecord;
 import io.zeebe.broker.workflow.data.WorkflowInstanceRecord;
 import io.zeebe.msgpack.UnpackedObject;
@@ -28,147 +25,129 @@ import io.zeebe.msgpack.property.EnumProperty;
 import io.zeebe.msgpack.property.LongProperty;
 import io.zeebe.msgpack.property.StringProperty;
 import io.zeebe.msgpack.spec.MsgPackHelper;
+import org.agrona.DirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 
-public class IncidentRecord extends UnpackedObject
-{
-    protected static final DirectBuffer EMPTY_PAYLOAD = new UnsafeBuffer(MsgPackHelper.EMTPY_OBJECT);
+public class IncidentRecord extends UnpackedObject {
+  protected static final DirectBuffer EMPTY_PAYLOAD = new UnsafeBuffer(MsgPackHelper.EMTPY_OBJECT);
 
-    private final EnumProperty<ErrorType> errorTypeProp = new EnumProperty<>("errorType", ErrorType.class, ErrorType.UNKNOWN);
-    private final StringProperty errorMessageProp = new StringProperty("errorMessage", "");
+  private final EnumProperty<ErrorType> errorTypeProp =
+      new EnumProperty<>("errorType", ErrorType.class, ErrorType.UNKNOWN);
+  private final StringProperty errorMessageProp = new StringProperty("errorMessage", "");
 
-    private final LongProperty failureEventPosition = new LongProperty("failureEventPosition", -1L);
+  private final LongProperty failureEventPosition = new LongProperty("failureEventPosition", -1L);
 
-    private final StringProperty bpmnProcessIdProp = new StringProperty("bpmnProcessId", "");
-    private final LongProperty workflowInstanceKeyProp = new LongProperty("workflowInstanceKey", -1L);
-    private final StringProperty activityIdProp = new StringProperty("activityId", "");
-    private final LongProperty activityInstanceKeyProp = new LongProperty("activityInstanceKey", -1L);
-    private final LongProperty jobKeyProp = new LongProperty("jobKey", -1L);
+  private final StringProperty bpmnProcessIdProp = new StringProperty("bpmnProcessId", "");
+  private final LongProperty workflowInstanceKeyProp = new LongProperty("workflowInstanceKey", -1L);
+  private final StringProperty activityIdProp = new StringProperty("activityId", "");
+  private final LongProperty activityInstanceKeyProp = new LongProperty("activityInstanceKey", -1L);
+  private final LongProperty jobKeyProp = new LongProperty("jobKey", -1L);
 
-    private final BinaryProperty payloadProp = new BinaryProperty("payload", EMPTY_PAYLOAD);
+  private final BinaryProperty payloadProp = new BinaryProperty("payload", EMPTY_PAYLOAD);
 
-    public IncidentRecord()
-    {
-        this
-            .declareProperty(errorTypeProp)
-            .declareProperty(errorMessageProp)
-            .declareProperty(failureEventPosition)
-            .declareProperty(bpmnProcessIdProp)
-            .declareProperty(workflowInstanceKeyProp)
-            .declareProperty(activityIdProp)
-            .declareProperty(activityInstanceKeyProp)
-            .declareProperty(jobKeyProp)
-            .declareProperty(payloadProp);
-    }
+  public IncidentRecord() {
+    this.declareProperty(errorTypeProp)
+        .declareProperty(errorMessageProp)
+        .declareProperty(failureEventPosition)
+        .declareProperty(bpmnProcessIdProp)
+        .declareProperty(workflowInstanceKeyProp)
+        .declareProperty(activityIdProp)
+        .declareProperty(activityInstanceKeyProp)
+        .declareProperty(jobKeyProp)
+        .declareProperty(payloadProp);
+  }
 
-    public ErrorType getErrorType()
-    {
-        return errorTypeProp.getValue();
-    }
+  public ErrorType getErrorType() {
+    return errorTypeProp.getValue();
+  }
 
-    public IncidentRecord setErrorType(ErrorType errorType)
-    {
-        this.errorTypeProp.setValue(errorType);
-        return this;
-    }
+  public IncidentRecord setErrorType(ErrorType errorType) {
+    this.errorTypeProp.setValue(errorType);
+    return this;
+  }
 
-    public DirectBuffer getErrorMessage()
-    {
-        return errorMessageProp.getValue();
-    }
+  public DirectBuffer getErrorMessage() {
+    return errorMessageProp.getValue();
+  }
 
-    public IncidentRecord setErrorMessage(String errorMessage)
-    {
-        this.errorMessageProp.setValue(errorMessage);
-        return this;
-    }
+  public IncidentRecord setErrorMessage(String errorMessage) {
+    this.errorMessageProp.setValue(errorMessage);
+    return this;
+  }
 
-    public long getFailureEventPosition()
-    {
-        return failureEventPosition.getValue();
-    }
+  public long getFailureEventPosition() {
+    return failureEventPosition.getValue();
+  }
 
-    public IncidentRecord setFailureEventPosition(long failureEventPosition)
-    {
-        this.failureEventPosition.setValue(failureEventPosition);
-        return this;
-    }
+  public IncidentRecord setFailureEventPosition(long failureEventPosition) {
+    this.failureEventPosition.setValue(failureEventPosition);
+    return this;
+  }
 
-    public DirectBuffer getBpmnProcessId()
-    {
-        return bpmnProcessIdProp.getValue();
-    }
+  public DirectBuffer getBpmnProcessId() {
+    return bpmnProcessIdProp.getValue();
+  }
 
-    public IncidentRecord setBpmnProcessId(DirectBuffer directBuffer)
-    {
-        bpmnProcessIdProp.setValue(directBuffer, 0, directBuffer.capacity());
-        return this;
-    }
+  public IncidentRecord setBpmnProcessId(DirectBuffer directBuffer) {
+    bpmnProcessIdProp.setValue(directBuffer, 0, directBuffer.capacity());
+    return this;
+  }
 
-    public DirectBuffer getActivityId()
-    {
-        return activityIdProp.getValue();
-    }
+  public DirectBuffer getActivityId() {
+    return activityIdProp.getValue();
+  }
 
-    public IncidentRecord setActivityId(DirectBuffer activityId)
-    {
-        this.activityIdProp.setValue(activityId, 0, activityId.capacity());
-        return this;
-    }
+  public IncidentRecord setActivityId(DirectBuffer activityId) {
+    this.activityIdProp.setValue(activityId, 0, activityId.capacity());
+    return this;
+  }
 
-    public long getWorkflowInstanceKey()
-    {
-        return workflowInstanceKeyProp.getValue();
-    }
+  public long getWorkflowInstanceKey() {
+    return workflowInstanceKeyProp.getValue();
+  }
 
-    public IncidentRecord setWorkflowInstanceKey(long workflowInstanceKey)
-    {
-        this.workflowInstanceKeyProp.setValue(workflowInstanceKey);
-        return this;
-    }
+  public IncidentRecord setWorkflowInstanceKey(long workflowInstanceKey) {
+    this.workflowInstanceKeyProp.setValue(workflowInstanceKey);
+    return this;
+  }
 
-    public long getActivityInstanceKey()
-    {
-        return activityInstanceKeyProp.getValue();
-    }
+  public long getActivityInstanceKey() {
+    return activityInstanceKeyProp.getValue();
+  }
 
-    public IncidentRecord setActivityInstanceKey(long activityInstanceKey)
-    {
-        this.activityInstanceKeyProp.setValue(activityInstanceKey);
-        return this;
-    }
+  public IncidentRecord setActivityInstanceKey(long activityInstanceKey) {
+    this.activityInstanceKeyProp.setValue(activityInstanceKey);
+    return this;
+  }
 
-    public long getJobKey()
-    {
-        return jobKeyProp.getValue();
-    }
+  public long getJobKey() {
+    return jobKeyProp.getValue();
+  }
 
-    public IncidentRecord setJobKey(long jobKey)
-    {
-        this.jobKeyProp.setValue(jobKey);
-        return this;
-    }
+  public IncidentRecord setJobKey(long jobKey) {
+    this.jobKeyProp.setValue(jobKey);
+    return this;
+  }
 
-    public DirectBuffer getPayload()
-    {
-        return this.payloadProp.getValue();
-    }
+  public DirectBuffer getPayload() {
+    return this.payloadProp.getValue();
+  }
 
-    public IncidentRecord setPayload(DirectBuffer payload)
-    {
-        this.payloadProp.setValue(payload);
-        return this;
-    }
+  public IncidentRecord setPayload(DirectBuffer payload) {
+    this.payloadProp.setValue(payload);
+    return this;
+  }
 
-    public IncidentRecord initFromWorkflowInstanceFailure(TypedRecord<WorkflowInstanceRecord> workflowInstanceEvent)
-    {
-        final WorkflowInstanceRecord value = workflowInstanceEvent.getValue();
+  public IncidentRecord initFromWorkflowInstanceFailure(
+      TypedRecord<WorkflowInstanceRecord> workflowInstanceEvent) {
+    final WorkflowInstanceRecord value = workflowInstanceEvent.getValue();
 
-        setFailureEventPosition(workflowInstanceEvent.getPosition());
-        setActivityInstanceKey(workflowInstanceEvent.getKey());
-        setBpmnProcessId(value.getBpmnProcessId());
-        setWorkflowInstanceKey(value.getWorkflowInstanceKey());
-        setActivityId(value.getActivityId());
+    setFailureEventPosition(workflowInstanceEvent.getPosition());
+    setActivityInstanceKey(workflowInstanceEvent.getKey());
+    setBpmnProcessId(value.getBpmnProcessId());
+    setWorkflowInstanceKey(value.getWorkflowInstanceKey());
+    setActivityId(value.getActivityId());
 
-        return this;
-    }
+    return this;
+  }
 }

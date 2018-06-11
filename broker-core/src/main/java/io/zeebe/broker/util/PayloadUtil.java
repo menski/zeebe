@@ -17,32 +17,24 @@
  */
 package io.zeebe.broker.util;
 
-import org.agrona.DirectBuffer;
-
 import io.zeebe.msgpack.spec.MsgPackCodes;
 import io.zeebe.msgpack.spec.MsgPackFormat;
 import io.zeebe.msgpack.spec.MsgPackType;
+import org.agrona.DirectBuffer;
 
-/**
- *
- */
-public final class PayloadUtil
-{
-    public static boolean isValidPayload(DirectBuffer payload)
-    {
-        boolean isValid = payload.capacity() > 0;
-        if (isValid)
-        {
-            final byte b = payload.getByte(0);
-            final MsgPackFormat format = MsgPackFormat.valueOf(b);
-            isValid = format.getType() == MsgPackType.MAP;
-        }
-        return isValid;
+/** */
+public final class PayloadUtil {
+  public static boolean isValidPayload(DirectBuffer payload) {
+    boolean isValid = payload.capacity() > 0;
+    if (isValid) {
+      final byte b = payload.getByte(0);
+      final MsgPackFormat format = MsgPackFormat.valueOf(b);
+      isValid = format.getType() == MsgPackType.MAP;
     }
+    return isValid;
+  }
 
-    public static boolean isNilPayload(DirectBuffer jobPayload)
-    {
-        return jobPayload.capacity() == 1 && jobPayload.getByte(0) == MsgPackCodes.NIL;
-    }
-
+  public static boolean isNilPayload(DirectBuffer jobPayload) {
+    return jobPayload.capacity() == 1 && jobPayload.getByte(0) == MsgPackCodes.NIL;
+  }
 }

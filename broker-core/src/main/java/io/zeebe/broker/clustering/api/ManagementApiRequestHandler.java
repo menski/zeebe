@@ -22,11 +22,6 @@ import static io.zeebe.broker.clustering.base.ClusterBaseLayerServiceNames.parti
 import static io.zeebe.broker.transport.TransportServiceNames.REPLICATION_API_CLIENT_NAME;
 import static io.zeebe.broker.transport.TransportServiceNames.clientTransport;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import io.zeebe.broker.Loggers;
 import io.zeebe.broker.clustering.base.partitions.Partition;
 import io.zeebe.broker.clustering.base.partitions.PartitionAlreadyExistsException;
@@ -45,188 +40,234 @@ import io.zeebe.util.buffer.BufferWriter;
 import io.zeebe.util.buffer.DirectBufferWriter;
 import io.zeebe.util.sched.ActorControl;
 import io.zeebe.util.sched.future.ActorFuture;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
 
-public class ManagementApiRequestHandler implements ServerRequestHandler, ServerMessageHandler
-{
-    private static final BufferWriter EMPTY_RESPONSE = new DirectBufferWriter().wrap(new UnsafeBuffer(new byte[0]));
-    private static final Logger LOG = Loggers.CLUSTERING_LOGGER;
+public class ManagementApiRequestHandler implements ServerRequestHandler, ServerMessageHandler {
+  private static final BufferWriter EMPTY_RESPONSE =
+      new DirectBufferWriter().wrap(new UnsafeBuffer(new byte[0]));
+  private static final Logger LOG = Loggers.CLUSTERING_LOGGER;
 
-    private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
-    private final CreatePartitionRequest createPartitionRequest = new CreatePartitionRequest();
-    private final InvitationRequest invitationRequest = new InvitationRequest();
+  private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
+  private final CreatePartitionRequest createPartitionRequest = new CreatePartitionRequest();
+  private final InvitationRequest invitationRequest = new InvitationRequest();
 
-    private final RaftPersistentConfigurationManager raftPersistentConfigurationManager;
-    private final ActorControl actor;
-    private final ServiceStartContext serviceStartContext;
-    private final BrokerCfg brokerCfg;
+  private final RaftPersistentConfigurationManager raftPersistentConfigurationManager;
+  private final ActorControl actor;
+  private final ServiceStartContext serviceStartContext;
+  private final BrokerCfg brokerCfg;
 
-    private final SnapshotReplicationRequestHandler snapshotReplicationRequestHandler;
+  private final SnapshotReplicationRequestHandler snapshotReplicationRequestHandler;
 
-    public ManagementApiRequestHandler(RaftPersistentConfigurationManager raftPersistentConfigurationManager,
-        ActorControl actor,
-        ServiceStartContext serviceStartContext,
-        BrokerCfg brokerCfg,
-        Map<Integer, Partition> trackedSnapshotPartitions)
-    {
-        this.raftPersistentConfigurationManager = raftPersistentConfigurationManager;
-        this.actor = actor;
-        this.serviceStartContext = serviceStartContext;
-        this.brokerCfg = brokerCfg;
-        this.snapshotReplicationRequestHandler = new SnapshotReplicationRequestHandler(LOG, trackedSnapshotPartitions, ServerTransportBuilder.DEFAULT_MAX_MESSAGE_LENGTH);
+  public ManagementApiRequestHandler(
+      RaftPersistentConfigurationManager raftPersistentConfigurationManager,
+      ActorControl actor,
+      ServiceStartContext serviceStartContext,
+      BrokerCfg brokerCfg,
+      Map<Integer, Partition> trackedSnapshotPartitions) {
+    this.raftPersistentConfigurationManager = raftPersistentConfigurationManager;
+    this.actor = actor;
+    this.serviceStartContext = serviceStartContext;
+    this.brokerCfg = brokerCfg;
+    this.snapshotReplicationRequestHandler =
+        new SnapshotReplicationRequestHandler(
+            LOG, trackedSnapshotPartitions, ServerTransportBuilder.DEFAULT_MAX_MESSAGE_LENGTH);
+  }
+
+  @Override
+  public boolean onRequest(
+      ServerOutput output,
+      RemoteAddress remoteAddress,
+      DirectBuffer buffer,
+      int offset,
+      int length,
+      long requestId) {
+    messageHeaderDecoder.wrap(buffer, offset);
+
+    final int schemaId = messageHeaderDecoder.schemaId();
+
+    if (InvitationResponseDecoder.SCHEMA_ID == schemaId) {
+      final int templateId = messageHeaderDecoder.templateId();
+      switch (templateId) {
+        case InvitationRequestEncoder.TEMPLATE_ID:
+          {
+            return onInvitationRequest(buffer, offset, length, output, remoteAddress, requestId);
+          }
+        case CreatePartitionRequestDecoder.TEMPLATE_ID:
+          {
+            return onCreatePartitionRequest(
+                buffer, offset, length, output, remoteAddress, requestId);
+          }
+        case ListSnapshotsRequestDecoder.TEMPLATE_ID:
+          {
+            sendResponse(
+                output,
+                remoteAddress,
+                requestId,
+                snapshotReplicationRequestHandler.handleListSnapshots(buffer, offset, length));
+            break;
+          }
+        case FetchSnapshotChunkRequestDecoder.TEMPLATE_ID:
+          {
+            sendResponse(
+                output,
+                remoteAddress,
+                requestId,
+                snapshotReplicationRequestHandler.handleFetchSnapshotChunk(buffer, offset, length));
+            break;
+          }
+      }
     }
 
-    @Override
-    public boolean onRequest(ServerOutput output, RemoteAddress remoteAddress, DirectBuffer buffer, int offset,
-            int length, long requestId)
-    {
-        messageHeaderDecoder.wrap(buffer, offset);
+    return true;
+  }
 
-        final int schemaId = messageHeaderDecoder.schemaId();
+  private boolean onCreatePartitionRequest(
+      DirectBuffer buffer,
+      int offset,
+      int length,
+      ServerOutput output,
+      RemoteAddress remoteAddress,
+      long requestId) {
+    createPartitionRequest.wrap(buffer, offset, length);
 
-        if (InvitationResponseDecoder.SCHEMA_ID == schemaId)
-        {
-            final int templateId = messageHeaderDecoder.templateId();
-            switch (templateId)
-            {
-                case InvitationRequestEncoder.TEMPLATE_ID:
-                {
-                    return onInvitationRequest(buffer, offset, length, output, remoteAddress, requestId);
-                }
-                case CreatePartitionRequestDecoder.TEMPLATE_ID:
-                {
-                    return onCreatePartitionRequest(buffer, offset, length, output, remoteAddress, requestId);
-                }
-                case ListSnapshotsRequestDecoder.TEMPLATE_ID:
-                {
-                    sendResponse(output, remoteAddress, requestId,
-                            snapshotReplicationRequestHandler.handleListSnapshots(buffer, offset, length));
-                    break;
-                }
-                case FetchSnapshotChunkRequestDecoder.TEMPLATE_ID:
-                {
-                    sendResponse(output, remoteAddress, requestId,
-                            snapshotReplicationRequestHandler.handleFetchSnapshotChunk(buffer, offset, length));
-                    break;
-                }
+    final DirectBuffer topicName = BufferUtil.cloneBuffer(createPartitionRequest.getTopicName());
+    final int partitionId = createPartitionRequest.getPartitionId();
+    final int replicationFactor = createPartitionRequest.getReplicationFactor();
+    final List<SocketAddress> members = Collections.emptyList();
+
+    LOG.info(
+        "Received create partition request for topic={}, partitionId={} and replicationFactor={}",
+        BufferUtil.bufferAsString(topicName),
+        partitionId,
+        replicationFactor);
+
+    installPartition(
+        topicName, partitionId, replicationFactor, members, output, remoteAddress, requestId);
+
+    return true;
+  }
+
+  private boolean onInvitationRequest(
+      DirectBuffer buffer,
+      int offset,
+      int length,
+      ServerOutput output,
+      RemoteAddress remoteAddress,
+      long requestId) {
+    invitationRequest.wrap(buffer, offset, length);
+
+    final DirectBuffer topicName = BufferUtil.cloneBuffer(invitationRequest.topicName());
+    final int partitionId = invitationRequest.partitionId();
+    final int replicationFactor = invitationRequest.replicationFactor();
+    final List<SocketAddress> members = new ArrayList<>(invitationRequest.members());
+
+    LOG.info(
+        "Received invitation request for topicName={}, partitionId={}, replicationFactor={} with members={}",
+        BufferUtil.bufferAsString(topicName),
+        partitionId,
+        replicationFactor,
+        members);
+
+    installPartition(
+        topicName, partitionId, replicationFactor, members, output, remoteAddress, requestId);
+
+    return true;
+  }
+
+  private void installPartition(
+      final DirectBuffer topicName,
+      final int partitionId,
+      final int replicationFactor,
+      final List<SocketAddress> members,
+      ServerOutput output,
+      RemoteAddress remoteAddress,
+      long requestId) {
+    final ActorFuture<RaftPersistentConfiguration> configurationFuture =
+        raftPersistentConfigurationManager.createConfiguration(
+            topicName, partitionId, replicationFactor, members);
+
+    actor.runOnCompletion(
+        configurationFuture,
+        (configuration, throwable) -> {
+          if (throwable != null) {
+            if (throwable instanceof PartitionAlreadyExistsException) {
+              LOG.info(throwable.getMessage());
+            } else {
+              LOG.error("Exception while creating partition", throwable);
             }
-        }
 
-        return true;
-    }
+            sendResponse(output, remoteAddress, requestId, EMPTY_RESPONSE);
+          } else {
+            final String partitionName =
+                String.format(
+                    "%s-%d",
+                    BufferUtil.bufferAsString(configuration.getTopicName()),
+                    configuration.getPartitionId());
+            final ServiceName<Void> partitionInstallServiceName =
+                partitionInstallServiceName(partitionName);
+            final boolean isSystemPartition =
+                Protocol.SYSTEM_PARTITION == configuration.getPartitionId();
+            final PartitionInstallService partitionInstallService =
+                new PartitionInstallService(brokerCfg, configuration, isSystemPartition);
 
-    private boolean onCreatePartitionRequest(DirectBuffer buffer, int offset, int length, ServerOutput output, RemoteAddress remoteAddress, long requestId)
-    {
-        createPartitionRequest.wrap(buffer, offset, length);
-
-        final DirectBuffer topicName = BufferUtil.cloneBuffer(createPartitionRequest.getTopicName());
-        final int partitionId = createPartitionRequest.getPartitionId();
-        final int replicationFactor = createPartitionRequest.getReplicationFactor();
-        final List<SocketAddress> members = Collections.emptyList();
-
-        LOG.info("Received create partition request for topic={}, partitionId={} and replicationFactor={}", BufferUtil.bufferAsString(topicName), partitionId, replicationFactor);
-
-        installPartition(topicName, partitionId, replicationFactor, members, output, remoteAddress, requestId);
-
-        return true;
-    }
-
-
-    private boolean onInvitationRequest(DirectBuffer buffer, int offset, int length, ServerOutput output, RemoteAddress remoteAddress, long requestId)
-    {
-        invitationRequest.wrap(buffer, offset, length);
-
-        final DirectBuffer topicName = BufferUtil.cloneBuffer(invitationRequest.topicName());
-        final int partitionId = invitationRequest.partitionId();
-        final int replicationFactor = invitationRequest.replicationFactor();
-        final List<SocketAddress> members = new ArrayList<>(invitationRequest.members());
-
-        LOG.info("Received invitation request for topicName={}, partitionId={}, replicationFactor={} with members={}", BufferUtil.bufferAsString(topicName), partitionId, replicationFactor, members);
-
-        installPartition(topicName, partitionId, replicationFactor, members, output, remoteAddress, requestId);
-
-        return true;
-    }
-
-    private void installPartition(final DirectBuffer topicName,
-        final int partitionId,
-        final int replicationFactor,
-        final List<SocketAddress> members,
-        ServerOutput output,
-        RemoteAddress remoteAddress,
-        long requestId)
-    {
-        final ActorFuture<RaftPersistentConfiguration> configurationFuture = raftPersistentConfigurationManager.createConfiguration(topicName, partitionId, replicationFactor, members);
-
-        actor.runOnCompletion(configurationFuture, (configuration, throwable) ->
-        {
-            if (throwable != null)
-            {
-                if (throwable instanceof PartitionAlreadyExistsException)
-                {
-                    LOG.info(throwable.getMessage());
-                }
-                else
-                {
-                    LOG.error("Exception while creating partition", throwable);
-                }
-
-                sendResponse(output, remoteAddress, requestId, EMPTY_RESPONSE);
-            }
-            else
-            {
-                final String partitionName = String.format("%s-%d", BufferUtil.bufferAsString(configuration.getTopicName()), configuration.getPartitionId());
-                final ServiceName<Void> partitionInstallServiceName = partitionInstallServiceName(partitionName);
-                final boolean isSystemPartition = Protocol.SYSTEM_PARTITION == configuration.getPartitionId();
-                final PartitionInstallService partitionInstallService = new PartitionInstallService(brokerCfg, configuration, isSystemPartition);
-
-                final ActorFuture<Void> partitionInstallFuture = serviceStartContext.createService(partitionInstallServiceName, partitionInstallService)
+            final ActorFuture<Void> partitionInstallFuture =
+                serviceStartContext
+                    .createService(partitionInstallServiceName, partitionInstallService)
                     .dependency(LOCAL_NODE, partitionInstallService.getLocalNodeInjector())
-                    .dependency(clientTransport(REPLICATION_API_CLIENT_NAME), partitionInstallService.getClientTransportInjector())
+                    .dependency(
+                        clientTransport(REPLICATION_API_CLIENT_NAME),
+                        partitionInstallService.getClientTransportInjector())
                     .install();
 
-                actor.runOnCompletion(partitionInstallFuture, (aVoid, installThrowable) ->
-                {
-                    if (installThrowable == null)
-                    {
-                        sendResponse(output, remoteAddress, requestId, EMPTY_RESPONSE);
-                    }
-                    else
-                    {
-                        LOG.error("Exception while creating partition", installThrowable);
-                    }
+            actor.runOnCompletion(
+                partitionInstallFuture,
+                (aVoid, installThrowable) -> {
+                  if (installThrowable == null) {
+                    sendResponse(output, remoteAddress, requestId, EMPTY_RESPONSE);
+                  } else {
+                    LOG.error("Exception while creating partition", installThrowable);
+                  }
                 });
-            }
+          }
         });
-    }
+  }
 
-    private void sendResponse(final ServerOutput output, final RemoteAddress remoteAddress, final long requestId, final BufferWriter responseWriter)
-    {
-        actor.runUntilDone(() ->
-        {
-            final ServerResponse response = new ServerResponse().reset()
-                    .remoteAddress(remoteAddress)
-                    .requestId(requestId)
-                    .writer(responseWriter);
+  private void sendResponse(
+      final ServerOutput output,
+      final RemoteAddress remoteAddress,
+      final long requestId,
+      final BufferWriter responseWriter) {
+    actor.runUntilDone(
+        () -> {
+          final ServerResponse response =
+              new ServerResponse()
+                  .reset()
+                  .remoteAddress(remoteAddress)
+                  .requestId(requestId)
+                  .writer(responseWriter);
 
-            if (output.sendResponse(response))
-            {
-                actor.done();
-            }
-            else
-            {
-                actor.yield();
-            }
+          if (output.sendResponse(response)) {
+            actor.done();
+          } else {
+            actor.yield();
+          }
         });
-    }
+  }
 
-    @Override
-    public boolean onMessage(ServerOutput output, RemoteAddress remoteAddress, DirectBuffer buffer, int offset, int length)
-    {
-        // no messages currently supported
-        return true;
-    }
+  @Override
+  public boolean onMessage(
+      ServerOutput output,
+      RemoteAddress remoteAddress,
+      DirectBuffer buffer,
+      int offset,
+      int length) {
+    // no messages currently supported
+    return true;
+  }
 }
-

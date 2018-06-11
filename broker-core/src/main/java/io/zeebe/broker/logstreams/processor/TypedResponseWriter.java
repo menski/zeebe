@@ -17,26 +17,18 @@
  */
 package io.zeebe.broker.logstreams.processor;
 
-import org.agrona.DirectBuffer;
-
 import io.zeebe.protocol.clientapi.RejectionType;
 import io.zeebe.protocol.intent.Intent;
+import org.agrona.DirectBuffer;
 
-public interface TypedResponseWriter
-{
+public interface TypedResponseWriter {
 
-    /**
-     * @return true if successful
-     */
-    boolean writeRejection(TypedRecord<?> record, RejectionType type, String reason);
+  /** @return true if successful */
+  boolean writeRejection(TypedRecord<?> record, RejectionType type, String reason);
 
-    /**
-     * @return true if successful
-     */
-    boolean writeRejection(TypedRecord<?> record, RejectionType type, DirectBuffer reason);
+  /** @return true if successful */
+  boolean writeRejection(TypedRecord<?> record, RejectionType type, DirectBuffer reason);
 
-    /**
-     * @return true if successful
-     */
-    boolean writeEvent(Intent intent, TypedRecord<?> record);
+  /** @return true if successful */
+  boolean writeEvent(Intent intent, TypedRecord<?> record);
 }
