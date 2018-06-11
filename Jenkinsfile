@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Test') {
             steps {
-                sh '/opt/maven/bin/mvn -B clean install'
+                sh '/opt/maven/bin/mvn -B clean install -Dcheckstyle.skip=true'
             }
         }
     }
