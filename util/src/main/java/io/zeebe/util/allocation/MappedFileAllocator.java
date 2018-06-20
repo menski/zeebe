@@ -31,6 +31,7 @@ public class MappedFileAllocator implements BufferAllocator {
 
   @Override
   public AllocatedBuffer allocate(int capacity) {
+      assert capacity > 0 : capacity;
     RandomAccessFile raf = null;
 
     try {

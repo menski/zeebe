@@ -85,6 +85,7 @@ public class BlockingMemoryPool implements TransportMemoryPool {
 
     if (canAllocte) {
       LOG.trace("Attocated {} bytes", requestedCapacity);
+      assert requestedCapacity > 0 : requestedCapacity;
       return ByteBuffer.allocate(requestedCapacity);
     } else {
       LOG.trace("Failed to allocate {} bytes", requestedCapacity);

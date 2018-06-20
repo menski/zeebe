@@ -25,7 +25,7 @@ public class TopicCreator {
 
   public static void main(final String[] args) throws InterruptedException {
 
-      final int iterations = 10;
+      final int iterations = 30;
       final Duration delay = Duration.ofSeconds(1);
 
     final String broker = "localhost:51015";

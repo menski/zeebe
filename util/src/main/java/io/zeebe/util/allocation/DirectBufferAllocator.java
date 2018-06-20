@@ -23,6 +23,7 @@ public class DirectBufferAllocator implements BufferAllocator {
 
   @Override
   public AllocatedBuffer allocate(int capacity) {
+      assert capacity > 0 : capacity;
     final AllocatedDirectBuffer buffer =
         new AllocatedDirectBuffer(
             ByteBuffer.allocateDirect(capacity), DirectBufferAllocator::onFree);
