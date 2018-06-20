@@ -18,38 +18,47 @@ package io.zeebe.example.topic;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.ZeebeClientBuilder;
 import io.zeebe.client.api.events.TopicEvent;
+import java.time.Duration;
+import java.util.UUID;
 
 public class TopicCreator {
 
-  public static void main(final String[] args) {
+  public static void main(final String[] args) throws InterruptedException {
+
+      final int iterations = 10;
+      final Duration delay = Duration.ofSeconds(1);
+
     final String broker = "localhost:51015";
-    final String topic = "test";
-    final int partitions = 1;
-    final int replicationFactor = 1;
+    final int partitions = 10;
+    final int replicationFactor = 3;
 
     final ZeebeClientBuilder clientBuilder =
         ZeebeClient.newClientBuilder().brokerContactPoint(broker);
 
     try (ZeebeClient client = clientBuilder.build()) {
-      System.out.println(
-          "Creating topic "
-              + topic
-              + " with "
-              + partitions
-              + " partition(s) "
-              + "with contact point "
-              + broker);
+      for (int i = 0; i < iterations; i++) {
+        final String topic = UUID.randomUUID().toString();
+        System.out.println(
+            "Creating topic "
+                + topic
+                + " with "
+                + partitions
+                + " partition(s) "
+                + "with contact point "
+                + broker);
 
-      final TopicEvent topicEvent =
-          client
-              .newCreateTopicCommand()
-              .name(topic)
-              .partitions(partitions)
-              .replicationFactor(replicationFactor)
-              .send()
-              .join();
+        final TopicEvent topicEvent =
+            client
+                .newCreateTopicCommand()
+                .name(topic)
+                .partitions(partitions)
+                .replicationFactor(replicationFactor)
+                .send()
+                .join();
 
-      System.out.println(topicEvent.getState());
+          System.out.println(topicEvent.getState());
+          Thread.sleep(delay.toMillis());
+      }
     }
   }
 }
