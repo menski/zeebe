@@ -157,6 +157,7 @@ public abstract class AbstractRaftState implements Service<AbstractRaftState>, M
 
     final boolean granted =
         raft.isTermCurrent(pollRequest)
+            && !appender.isClosed()
             && appender.isAfterOrEqualsLastEvent(
                 pollRequest.getLastEventPosition(), pollRequest.getLastEventTerm());
 
@@ -182,6 +183,7 @@ public abstract class AbstractRaftState implements Service<AbstractRaftState>, M
     final boolean granted =
         raft.isTermCurrent(voteRequest)
             && raft.canVoteFor(voteRequest)
+            && !appender.isClosed()
             && appender.isAfterOrEqualsLastEvent(
                 voteRequest.getLastEventPosition(), voteRequest.getLastEventTerm())
             && heartbeat.shouldElect();
