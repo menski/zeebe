@@ -25,7 +25,8 @@ import org.agrona.BufferUtil;
 public class AllocatedDirectBuffer extends AllocatedBuffer {
   private final Consumer<AllocatedDirectBuffer> onCloseCallback;
 
-  public static final Map<Long, Throwable> FREED_BUFFERS = Collections.synchronizedMap(new HashMap<>());
+  public static final Map<Long, Throwable> FREED_BUFFERS =
+      Collections.synchronizedMap(new HashMap<>());
 
   public AllocatedDirectBuffer(ByteBuffer buffer, Consumer<AllocatedDirectBuffer> onClose) {
     super(buffer);

@@ -25,8 +25,8 @@ public class TopicCreator {
 
   public static void main(final String[] args) throws InterruptedException {
 
-      final int iterations = 30;
-      final Duration delay = Duration.ofSeconds(1);
+    final int iterations = 30;
+    final Duration delay = Duration.ofSeconds(1);
 
     final String broker = "localhost:51015";
     final int partitions = 10;
@@ -56,8 +56,8 @@ public class TopicCreator {
                 .send()
                 .join();
 
-          System.out.println(topicEvent.getState());
-          Thread.sleep(delay.toMillis());
+        System.out.println(topicEvent.getState());
+        Thread.sleep(delay.toMillis());
       }
     }
   }

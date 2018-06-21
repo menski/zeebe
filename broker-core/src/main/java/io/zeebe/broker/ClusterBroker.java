@@ -20,7 +20,6 @@ package io.zeebe.broker;
 import static java.lang.Runtime.getRuntime;
 import static net.bytebuddy.matcher.ElementMatchers.nameStartsWith;
 import static net.bytebuddy.matcher.ElementMatchers.named;
-import static net.bytebuddy.matcher.ElementMatchers.not;
 
 import io.zeebe.broker.system.configuration.BrokerCfg;
 import io.zeebe.broker.system.configuration.NetworkCfg;
@@ -52,7 +51,6 @@ class Broker3 extends ClusterBroker {
   }
 }
 
-
 public class ClusterBroker {
   private static String tempFolder;
 
@@ -61,34 +59,35 @@ public class ClusterBroker {
     final Broker broker = startDefaultBrokerInTempDirectory(clientPort, contactPoint);
 
     getRuntime()
-      .addShutdownHook(
-        new Thread("Broker close Thread") {
-          @Override
-          public void run() {
-            try {
-              broker.close();
-            } finally {
-              deleteTempDirectory();
-            }
-          }
-        });
+        .addShutdownHook(
+            new Thread("Broker close Thread") {
+              @Override
+              public void run() {
+                try {
+                  broker.close();
+                } finally {
+                  deleteTempDirectory();
+                }
+              }
+            });
 
     try (Scanner scanner = new Scanner(System.in)) {
       while (scanner.hasNextLine()) {
         final String nextLine = scanner.nextLine();
         if (nextLine.contains("exit")
-          || nextLine.contains("close")
-          || nextLine.contains("quit")
-          || nextLine.contains("halt")
-          || nextLine.contains("shutdown")
-          || nextLine.contains("stop")) {
+            || nextLine.contains("close")
+            || nextLine.contains("quit")
+            || nextLine.contains("halt")
+            || nextLine.contains("shutdown")
+            || nextLine.contains("stop")) {
           System.exit(0);
         }
       }
     }
   }
 
-  private static Broker startDefaultBrokerInTempDirectory(final int clientPort, final Integer contactPoint) {
+  private static Broker startDefaultBrokerInTempDirectory(
+      final int clientPort, final Integer contactPoint) {
     try {
       tempFolder = Files.createTempDirectory("zeebe").toAbsolutePath().normalize().toString();
 
@@ -100,12 +99,10 @@ public class ClusterBroker {
       network.getManagement().setPort(clientPort + 1);
       network.getReplication().setPort(clientPort + 2);
 
-      if (contactPoint == null)
-      {
+      if (contactPoint == null) {
         cfg.setBootstrap(1);
-      }
-      else {
-        cfg.getCluster().setInitialContactPoints(new String[] { "localhost:" + contactPoint });
+      } else {
+        cfg.getCluster().setInitialContactPoints(new String[] {"localhost:" + contactPoint});
       }
 
       return new Broker(cfg, tempFolder, null);
@@ -124,12 +121,15 @@ public class ClusterBroker {
     }
   }
 
-
   public static void premain(String arg, Instrumentation inst) throws Exception {
     new AgentBuilder.Default()
-      .type(named("org.agrona.concurrent.UnsafeBuffer"))
-      .transform((builder, typeDescription, classLoader, module) ->
-        builder.method(nameStartsWith("get").or(nameStartsWith("put"))).intercept(MethodDelegation.to(MyInterceptor.class).andThen(SuperMethodCall.INSTANCE)))
-      .installOn(inst);
+        .type(named("org.agrona.concurrent.UnsafeBuffer"))
+        .transform(
+            (builder, typeDescription, classLoader, module) ->
+                builder
+                    .method(nameStartsWith("get").or(nameStartsWith("put")))
+                    .intercept(
+                        MethodDelegation.to(MyInterceptor.class).andThen(SuperMethodCall.INSTANCE)))
+        .installOn(inst);
   }
 }

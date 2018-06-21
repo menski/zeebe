@@ -29,7 +29,7 @@ public class UnboundedMemoryPool implements TransportMemoryPool {
   @Override
   public ByteBuffer allocate(int requestedCapacity) {
     LOG.trace("Attocated {} bytes", requestedCapacity);
-      assert requestedCapacity > 0 : requestedCapacity;
+    assert requestedCapacity > 0 : requestedCapacity;
     return ByteBuffer.allocate(requestedCapacity);
   }
 

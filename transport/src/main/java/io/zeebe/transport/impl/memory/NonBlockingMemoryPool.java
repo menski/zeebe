@@ -58,7 +58,7 @@ public class NonBlockingMemoryPool implements TransportMemoryPool {
 
     if (canAllocate) {
       LOG.trace("Attocated {} bytes", requestedCapacity);
-        assert requestedCapacity > 0 : requestedCapacity;
+      assert requestedCapacity > 0 : requestedCapacity;
       return ByteBuffer.allocate(requestedCapacity);
     } else {
       LOG.trace("Failed to allocate {} bytes", requestedCapacity);
