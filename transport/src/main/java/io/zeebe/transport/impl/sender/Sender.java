@@ -20,6 +20,8 @@ import io.zeebe.transport.impl.*;
 import io.zeebe.transport.impl.actor.ActorContext;
 import io.zeebe.transport.impl.memory.TransportMemoryPool;
 import io.zeebe.util.ByteValue;
+import io.zeebe.util.allocation.AllocatedBuffer;
+import io.zeebe.util.allocation.BufferAllocators;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.channel.ConcurrentQueueChannel;
 import io.zeebe.util.sched.clock.ActorClock;
@@ -338,11 +340,13 @@ public class Sender extends Actor implements TimerHandler {
     final List<OutgoingRequest> requestsInBatch = new ArrayList<>();
 
     final UnsafeBuffer view = new UnsafeBuffer();
+    final AllocatedBuffer allocatedBuffer;
     final ByteBuffer batchBuffer;
     int writeOffset = 0;
 
     Batch(int size) {
-      batchBuffer = ByteBuffer.allocateDirect(size);
+      allocatedBuffer = BufferAllocators.allocateDirect(size);
+      batchBuffer = allocatedBuffer.getRawBuffer();
       view.wrap(batchBuffer);
     }
 

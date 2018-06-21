@@ -22,6 +22,9 @@ import io.zeebe.dispatcher.impl.log.DataFrameDescriptor;
 import io.zeebe.logstreams.impl.LogEntryDescriptor;
 import io.zeebe.logstreams.impl.log.index.LogBlockIndex;
 import io.zeebe.logstreams.spi.LogStorage;
+import io.zeebe.util.allocation.AllocatedBuffer;
+import io.zeebe.util.allocation.BufferAllocator;
+import io.zeebe.util.allocation.BufferAllocators;
 import java.nio.ByteBuffer;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -54,7 +57,8 @@ public class LogStreamUtil {
     protected LogBlockIndex blockIndex;
     protected LogStorage logStorage;
 
-    protected final ByteBuffer ioBuffer = ByteBuffer.allocateDirect(MAX_READ_EVENT_SIZE);
+    protected final AllocatedBuffer allocatedBuffer = BufferAllocators.allocateDirect(MAX_READ_EVENT_SIZE);
+    protected final ByteBuffer ioBuffer = allocatedBuffer.getRawBuffer();
     protected final DirectBuffer buffer = new UnsafeBuffer(0, 0);
 
     protected long nextReadAddress = INVALID_ADDRESS;
