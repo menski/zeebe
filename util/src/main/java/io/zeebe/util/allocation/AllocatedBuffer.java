@@ -21,7 +21,8 @@ import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 
 public abstract class AllocatedBuffer implements CloseableSilently {
-  private static final Logger LOG = Loggers.ALLOCATION_LOGGER;
+
+  protected static final Logger LOG = Loggers.ALLOCATION_LOGGER;
 
   protected final ByteBuffer rawBuffer;
   private volatile boolean closed;
