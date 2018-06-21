@@ -30,7 +30,7 @@ pipeline {
         stage('Tests') {
             steps {
                 withMaven(jdk: jdkVersion, maven: mavenVersion, mavenSettingsConfig: mavenSettingsConfig) {
-                    sh 'mvn -B verify -P skip-unstable-ci'
+                    sh 'mvn -B verify'
                 }
             }
             post {
