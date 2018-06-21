@@ -62,8 +62,6 @@ public class BufferedLogStorageAppender {
   private long lastBufferedPosition;
   private int lastBufferedTerm;
 
-  private boolean closed = false;
-
   public BufferedLogStorageAppender(final Raft raft) {
     this.raft = raft;
     this.logStream = raft.getLogStream();
@@ -76,31 +74,24 @@ public class BufferedLogStorageAppender {
   }
 
   public void reset() {
-    if (!closed) {
-      reader.seekToLastEvent();
+    reader.seekToLastEvent();
 
-      if (reader.hasNext()) {
-        final LoggedEvent lastEvent = reader.next();
+    if (reader.hasNext()) {
+      final LoggedEvent lastEvent = reader.next();
 
-        lastWrittenPosition = lastEvent.getPosition();
-        lastWrittenTerm = lastEvent.getRaftTerm();
-      } else {
-        lastWrittenPosition = previousEventPositionNullValue();
-        lastWrittenTerm = previousEventTermNullValue();
-      }
+      lastWrittenPosition = lastEvent.getPosition();
+      lastWrittenTerm = lastEvent.getRaftTerm();
+    } else {
+      lastWrittenPosition = previousEventPositionNullValue();
+      lastWrittenTerm = previousEventTermNullValue();
     }
 
     discardBufferedEvents();
   }
 
   public void close() {
-    closed = true;
     reader.close();
     allocatedBuffer.close();
-  }
-
-  public boolean isClosed() {
-    return closed;
   }
 
   public boolean isLastEvent(final long position, final int term) {
