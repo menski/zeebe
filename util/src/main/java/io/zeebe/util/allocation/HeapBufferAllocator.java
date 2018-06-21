@@ -21,7 +21,7 @@ public class HeapBufferAllocator implements BufferAllocator {
 
   @Override
   public AllocatedBuffer allocate(int capacity) {
-    assert capacity > 0 : capacity;
+    assert capacity >= 0 : capacity;
     return new ExternallyAllocatedBuffer(ByteBuffer.allocate(capacity));
   }
 }
