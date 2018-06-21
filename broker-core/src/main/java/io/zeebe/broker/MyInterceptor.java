@@ -1,16 +1,14 @@
 package io.zeebe.broker;
 
-import io.zeebe.util.Loggers;
 import io.zeebe.util.allocation.AllocatedDirectBuffer;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import net.bytebuddy.implementation.bind.annotation.This;
 import org.agrona.BufferUtil;
 import org.agrona.concurrent.UnsafeBuffer;
-import org.slf4j.Logger;
 
 public class MyInterceptor {
-
-  private static final Logger LOG = Loggers.ALLOCATION_LOGGER;
 
   public static void intercept(@This Object buffer) throws Exception {
     final ByteBuffer byteBuffer = ((UnsafeBuffer) buffer).byteBuffer();
@@ -18,7 +16,13 @@ public class MyInterceptor {
     if (byteBuffer != null && byteBuffer.isDirect())
     {
       final long address = BufferUtil.address(byteBuffer);
-      assert !AllocatedDirectBuffer.FREED_BUFFERS.contains(address) : address;
+      final Throwable t;
+      if ((t = AllocatedDirectBuffer.FREED_BUFFERS.get(address)) != null)
+      {
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        assert false : "Access to buffer at address " + address + " which was already freed by " + sw;
+      }
     }
   }
 

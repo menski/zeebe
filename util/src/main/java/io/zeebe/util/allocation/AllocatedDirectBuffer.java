@@ -16,25 +16,25 @@
 package io.zeebe.util.allocation;
 
 import java.nio.ByteBuffer;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 import org.agrona.BufferUtil;
 
 public class AllocatedDirectBuffer extends AllocatedBuffer {
   private final Consumer<AllocatedDirectBuffer> onCloseCallback;
 
-  public static final Set<Long> FREED_BUFFERS = new HashSet<>();
+  public static final Map<Long, Throwable> FREED_BUFFERS = new HashMap<>();
 
   public AllocatedDirectBuffer(ByteBuffer buffer, Consumer<AllocatedDirectBuffer> onClose) {
     super(buffer);
     this.onCloseCallback = onClose;
+    FREED_BUFFERS.remove(BufferUtil.address(buffer));
   }
 
   @Override
   public void doClose() {
-    LOG.info("Freeing buffer at address {}", BufferUtil.address(rawBuffer));
-    FREED_BUFFERS.add(BufferUtil.address(rawBuffer));
+    FREED_BUFFERS.put(BufferUtil.address(rawBuffer), new Throwable());
     AllocationUtil.freeDirectBuffer(rawBuffer);
 
     onCloseCallback.accept(this);
