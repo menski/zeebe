@@ -18,3 +18,7 @@ jobs:
           java-version: 11
       - name: Build distro
         run: mvn --batch-mode --update-snapshots clean package -DskipTests -pl dist -am
+      - name: Start distro
+        run: nohup ./dist/target/zeebe-broker/bin/broker > broker.log 3>&1 &; echo $! > broker_pid.txt
+      - name: Check status
+        run: ./dist/target/zeebe-broker/bin/zbctl --insecure status
